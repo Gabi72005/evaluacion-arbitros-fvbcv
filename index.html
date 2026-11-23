@@ -209,7 +209,7 @@ function renderLogin(err){
     try{
       const r=await fetch(WORKER_URL+'/auth/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,deviceId:getDeviceId(),deviceInfo:getDeviceInfo()})});
       const d=await r.json();
-      if(d.ok){localStorage.setItem('_session',d.token);render();}
+      if(d.ok){localStorage.setItem('_session',d.token);if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}render();}
       else{errEl.textContent=d.error||'Código incorrecto';btn.disabled=false;btn.textContent='Entrar';}
     }catch(e){errEl.textContent='Error de conexión. Comprueba internet.';btn.disabled=false;btn.textContent='Entrar';}
   };
@@ -222,7 +222,7 @@ async function initApp(){
     try{
       const r=await fetch(WORKER_URL+'/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
       const d=await r.json();
-      if(d.ok){render();return;}
+      if(d.ok){if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}render();return;}
     }catch(e){}
     localStorage.removeItem('_session');
   }
