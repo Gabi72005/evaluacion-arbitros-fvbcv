@@ -226,7 +226,9 @@ async function initApp(){
       clearTimeout(tid);
       const d=await r.json();
       if(d.ok){if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}render();return;}
-    }catch(e){}
+    }catch(e){
+      if(e&&e.name==='AbortError'){render();return;}
+    }
     localStorage.removeItem('_session');
   }
   renderLogin();

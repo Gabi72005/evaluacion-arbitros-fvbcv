@@ -204,7 +204,7 @@ async function handleAddName(request, env) {
     createdAt: nowIso(),
   }));
 
-  return json({ ok: true, code }, 200, env);
+  return json({ ok: true, code, codeHash: hash }, 200, env);
 }
 
 async function handleRevoke(request, env) {

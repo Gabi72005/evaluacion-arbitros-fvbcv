@@ -256,13 +256,16 @@ function showAddModal(){
           <p style="font-size:14px;text-align:center;margin:0">Envía este código a <b>${esc(name)}</b>.</p>
           ${extra}`;
         btn.classList.add('hidden');
+        // Update list and close modal when user clicks Cerrar
         document.getElementById('mClose').textContent='Cerrar';
-        // Optimistic update: add to local list immediately (KV has eventual consistency)
-        if(!d.alreadyExists && !d.reactivated){
-          if(!data.codes) data.codes=[];
-          data.codes.push({label:name,status:'pending',code:d.code,deviceId:null,usedAt:null,createdAt:new Date().toISOString()});
-        }
-        render();
+        document.getElementById('mClose').onclick=()=>{
+          if(!d.alreadyExists && !d.reactivated){
+            if(!data.codes) data.codes=[];
+            data.codes.push({label:name,status:'pending',code:d.code,codeHash:d.codeHash,deviceId:null,usedAt:null,createdAt:new Date().toISOString()});
+          }
+          md.innerHTML='';
+          render();
+        };
       }else{
         err.textContent=d.error||'Error al generar';btn.disabled=false;btn.textContent='Generar código';
       }
