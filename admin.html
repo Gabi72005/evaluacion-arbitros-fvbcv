@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin · Evaluación Árbitros FVBCV</title>
+<style>
+:root{
+  --blue:#1b5fa8; --blue-d:#134a85; --blue-l:#e8f0fa;
+  --ok:#17844a; --ok-l:#e3f4ea; --ko:#c62f2f; --ko-l:#fbe7e7;
+  --ink:#16202c; --mute:#5d6b7a; --line:#dde3ea; --bg:#f3f5f8; --card:#fff;
+  --orange:#f29a1d;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{max-width:860px;margin:0 auto;min-height:100vh;padding:0 0 40px}
+header{background:var(--blue);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:20px}
+header h1{margin:0;font-size:18px;font-weight:700;flex:1}
+header .sub{font-size:12px;opacity:.8;font-weight:400;display:block}
+.iconbtn{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:9px;height:38px;padding:0 12px;font-size:14px;font-weight:600;white-space:nowrap}
+.wrap{padding:0 16px}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid var(--line);box-shadow:0 1px 2px rgba(16,32,44,.06)}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--blue-d);margin:0 0 12px;font-weight:700}
+input.t,select.t{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;font-size:15px}
+input.t:focus,select.t:focus{outline:none;border-color:var(--blue)}
+.btn{border:0;border-radius:11px;padding:11px 16px;font-weight:650;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:var(--blue);color:#fff}
+.btn.pri:active{background:var(--blue-d)}
+.btn.dan{background:var(--ko);color:#fff}
+.btn.sec{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.pill.ok{background:var(--ok-l);color:var(--ok)}
+.pill.ko{background:var(--ko-l);color:var(--ko)}
+.pill.na{background:#eceff3;color:var(--mute)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+.stat .n{font-size:28px;font-weight:800;color:var(--blue);line-height:1}
+.stat .l{font-size:12px;color:var(--mute);margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;color:var(--mute);font-weight:700;border-bottom:1.5px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.ua{font-size:11px;color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.ts{font-size:12px;color:var(--mute)}
+.empty{color:var(--mute);font-size:14px;text-align:center;padding:20px}
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,30,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.modal-sheet{background:#fff;width:100%;max-width:500px;border-radius:18px 18px 0 0;padding:20px 18px 28px}
+.modal-sheet h3{margin:0 0 8px;font-size:18px}
+.modal-sheet p{margin:0 0 14px;color:var(--mute);font-size:14px}
+.code-box{background:var(--blue-l);border:1.5px solid var(--blue);border-radius:12px;padding:16px;text-align:center;margin:14px 0;font-size:28px;font-weight:800;letter-spacing:.15em;color:var(--blue-d);font-family:monospace}
+.hint{font-size:13px;color:var(--mute);margin-top:6px}
+.stack>*+*{margin-top:8px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1.5px solid var(--line);padding-bottom:0}
+.tab{border:0;background:transparent;padding:10px 14px;font-size:14px;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
+.tab.on{color:var(--blue);border-bottom-color:var(--blue)}
+.login-wrap{display:grid;place-items:center;min-height:100vh;padding:14px}
+.login-card{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:360px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(16,32,44,.08)}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.brand .dot{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 18%,var(--orange) 19% 45%,var(--blue) 46%);flex:none}
+.brand b{display:block;font-size:17px}
+.brand span{font-size:12px;color:var(--mute)}
+label.f{display:block;font-size:12px;color:var(--mute);margin:12px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+@media(max-width:600px){th.hide,td.hide{display:none}table{font-size:12px}td{padding:8px 6px}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const WORKER_URL = 'https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
+let adminSecret = sessionStorage.getItem('_adm') || '';
+let activeTab = 'codes';
+let data = null;
+
+const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function fmtDate(iso){
+  if(!iso) return '—';
+  try{
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' +
+           d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){return iso;}
+}
+
+function parseBrowser(ua){
+  if(!ua) return '—';
+  if(/iPhone|iPad/.test(ua)) return '📱 iOS';
+  if(/Android/.test(ua)) return '📱 Android';
+  if(/Windows/.test(ua)) return '💻 Windows';
+  if(/Mac/.test(ua)) return '💻 Mac';
+  return '🖥️ Otro';
+}
+
+function render(){
+  const root = document.getElementById('root');
+  if(!adminSecret){ root.innerHTML = renderLogin(); bindLogin(); return; }
+  root.innerHTML = renderApp();
+  bindApp();
+}
+
+function renderLogin(){
+  return `<div class="login-wrap"><div class="login-card">
+    <div class="brand"><div class="dot"></div><div><b>Panel de Admin</b><span>Evaluación Árbitros FVBCV</span></div></div>
+    <label class="f" for="sec">Contraseña de administrador</label>
+    <input class="t" type="password" id="sec" placeholder="••••••••••••">
+    <div id="lErr" style="color:var(--ko);font-size:13px;margin:8px 0 0;min-height:18px"></div>
+    <button class="btn pri" id="lBtn" style="width:100%;margin-top:12px;justify-content:center">Entrar</button>
+  </div></div>`;
+}
+
+function bindLogin(){
+  const inp = document.getElementById('sec');
+  const btn = document.getElementById('lBtn');
+  const err = document.getElementById('lErr');
+  inp.onkeydown = e => { if(e.key==='Enter') btn.click(); };
+  btn.onclick = async () => {
+    const secret = inp.value.trim();
+    if(!secret) return;
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    try{
+      const r = await fetch(WORKER_URL+'/admin/data', {headers:{'Authorization':'Bearer '+secret}});
+      if(r.ok){
+        adminSecret = secret;
+        sessionStorage.setItem('_adm', secret);
+        data = await r.json();
+        render();
+      } else {
+        err.textContent = 'Contraseña incorrecta';
+        btn.disabled = false; btn.textContent = 'Entrar';
+      }
+    }catch(e){
+      err.textContent = 'Error de conexión';
+      btn.disabled = false; btn.textContent = 'Entrar';
+    }
+  };
+}
+
+function renderApp(){
+  if(!data) return '<div class="wrap"><p class="empty">Cargando…</p></div>';
+
+  const codes = data.codes || [];
+  const logs = data.logs || [];
+  const active = codes.filter(c=>c.status==='active').length;
+  const pending = codes.filter(c=>c.status==='pending').length;
+  const revoked = codes.filter(c=>c.status==='revoked').length;
+  const pdfsToday = logs.filter(l=>l.type==='pdf'&&l.timestamp&&l.timestamp.startsWith(new Date().toISOString().slice(0,10))).length;
+
+  return `
+  <header>
+    <h1>Panel de Admin<span class="sub">Evaluación Árbitros FVBCV</span></h1>
+    <button class="iconbtn" id="refreshBtn">↻ Actualizar</button>
+    <button class="iconbtn" id="logoutBtn" style="margin-left:6px">Salir</button>
+  </header>
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat"><div class="n">${codes.length}</div><div class="l">Códigos total</div></div>
+      <div class="stat"><div class="n" style="color:var(--ok)">${active}</div><div class="l">Activos</div></div>
+      <div class="stat"><div class="n" style="color:var(--orange)">${pending}</div><div class="l">Sin activar</div></div>
+      <div class="stat"><div class="n" style="color:var(--ko)">${revoked}</div><div class="l">Revocados</div></div>
+      <div class="stat"><div class="n">${pdfsToday}</div><div class="l">PDFs hoy</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab ${activeTab==='codes'?'on':''}" data-tab="codes">Códigos de acceso</button>
+      <button class="tab ${activeTab==='logs'?'on':''}" data-tab="logs">Actividad</button>
+    </div>
+
+    ${activeTab==='codes' ? renderCodesTab(codes) : renderLogsTab(logs)}
+  </div>
+
+  <div id="modal"></div>`;
+}
+
+function renderCodesTab(codes){
+  const sorted = [...codes].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  return `
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <button class="btn pri" id="newCodeBtn">＋ Nuevo código</button>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    ${sorted.length ? `<table>
+      <thead><tr>
+        <th>Para quién</th>
+        <th>Estado</th>
+        <th class="hide">Dispositivo</th>
+        <th class="hide">Último acceso</th>
+        <th>Acción</th>
+      </tr></thead>
+      <tbody>${sorted.map(c => `<tr>
+        <td><b>${esc(c.label)}</b><div class="ts">Creado ${fmtDate(c.createdAt)}</div></td>
+        <td>${statusPill(c.status)}</td>
+        <td class="hide">
+          ${c.deviceInfo ? `${parseBrowser(c.deviceInfo.ua)}<div class="ua">${esc(c.deviceInfo.screen||'')} · ${esc(c.deviceInfo.lang||'')}</div>` : '<span style="color:var(--mute)">—</span>'}
+        </td>
+        <td class="hide"><span class="ts">${c.usedAt ? fmtDate(c.usedAt) : '—'}</span></td>
+        <td>${c.status!=='revoked'
+          ? `<button class="btn dan" data-revoke="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:7px 12px">Revocar</button>`
+          : '<span style="color:var(--mute);font-size:12px">Revocado</span>'
+        }</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">No hay códigos. Crea el primero.</div>'}
+  </div>`;
+}
+
+function renderLogsTab(logs){
+  const logsFiltered = logs.filter(Boolean);
+  return `<div class="card" style="padding:0;overflow:hidden">
+    ${logsFiltered.length ? `<table>
+      <thead><tr>
+        <th>Tipo</th>
+        <th>Árbitro / Examinador</th>
+        <th class="hide">Detalles</th>
+        <th>Fecha</th>
+      </tr></thead>
+      <tbody>${logsFiltered.map(l => `<tr>
+        <td>${l.type==='pdf'
+          ? '<span class="pill ok">📄 PDF</span>'
+          : '<span class="pill na">🔑 Login</span>'}</td>
+        <td>
+          <b>${esc(l.label||'—')}</b>
+          ${l.type==='pdf' ? `<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+l.nEval+'ª':''}</div>` : ''}
+          ${l.type==='login' && l.deviceInfo ? `<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>` : ''}
+        </td>
+        <td class="hide">
+          ${l.type==='pdf' ? `<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>` : ''}
+          ${l.type==='login' && l.deviceInfo ? `<div class="ua">${esc(l.deviceInfo.tz||'')}</div>` : ''}
+        </td>
+        <td><span class="ts">${fmtDate(l.timestamp)}</span></td>
+      </tr>`).join('')}</tbody>
+    </table>` : '<div class="empty">Sin actividad todavía.</div>'}
+  </div>`;
+}
+
+function statusPill(status){
+  if(status==='active') return '<span class="pill ok">✓ Activo</span>';
+  if(status==='pending') return '<span class="pill na">⏳ Sin activar</span>';
+  if(status==='revoked') return '<span class="pill ko">✗ Revocado</span>';
+  return '<span class="pill na">'+esc(status)+'</span>';
+}
+
+function bindApp(){
+  document.getElementById('refreshBtn').onclick = loadData;
+  document.getElementById('logoutBtn').onclick = () => {
+    sessionStorage.removeItem('_adm'); adminSecret=''; data=null; render();
+  };
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick=()=>{activeTab=b.dataset.tab;render();});
+  const nb = document.getElementById('newCodeBtn');
+  if(nb) nb.onclick = showCreateModal;
+  document.querySelectorAll('[data-revoke]').forEach(b => b.onclick=()=>showRevokeModal(b.dataset.revoke, b.dataset.label));
+}
+
+function showCreateModal(){
+  const md = document.getElementById('modal');
+  md.innerHTML = `<div class="modal-bg" id="mbg"><div class="modal-sheet">
+    <h3>Nuevo código de acceso</h3>
+    <p>El código se genera automáticamente y se puede usar una sola vez en un dispositivo.</p>
+    <label class="f" for="mlabel">Para quién es</label>
+    <input class="t" id="mlabel" placeholder="Nombre y apellidos del árbitro">
+    <div id="mErr" style="color:var(--ko);font-size:13px;margin:8px 0;min-height:18px"></div>
+    <div id="mResult" class="hidden"></div>
+    <div class="stack" style="margin-top:14px">
+      <button class="btn pri" id="mCreate" style="justify-content:center">Generar código</button>
+      <button class="btn sec" id="mClose" style="justify-content:center">Cancelar</button>
+    </div>
+  </div></div>`;
+
+  md.querySelector('#mClose').onclick = ()=>md.innerHTML='';
+  md.querySelector('#mbg').onclick = e=>{if(e.target===md.querySelector('#mbg'))md.innerHTML='';};
+  document.getElementById('mlabel').onkeydown = e=>{if(e.key==='Enter')document.getElementById('mCreate').click();};
+
+  document.getElementById('mCreate').onclick = async () => {
+    const label = document.getElementById('mlabel').value.trim();
+    const err = document.getElementById('mErr');
+    if(!label){err.textContent='Escribe el nombre.';return;}
+    const btn = document.getElementById('mCreate');
+    btn.disabled=true; btn.textContent='Generando…';
+    try{
+      const r = await fetch(WORKER_URL+'/admin/codes',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminSecret},
+        body:JSON.stringify({label})
+      });
+      const d = await r.json();
+      if(d.ok){
+        document.getElementById('mResult').innerHTML = `
+          <div class="code-box">${esc(d.code)}</div>
+          <p style="font-size:14px;text-align:center;margin:0;color:var(--mute)">Envía este código a <b>${esc(label)}</b> por WhatsApp o correo.<br>Solo se muestra una vez.</p>`;
+        document.getElementById('mResult').classList.remove('hidden');
+        document.getElementById('mCreate').classList.add('hidden');
+        document.querySelector('.modal-sheet p').textContent='Código generado.';
+        document.getElementById('mClose').textContent='Cerrar';
+        await loadData();
+      } else {
+        err.textContent = d.error || 'Error al generar';
+        btn.disabled=false; btn.textContent='Generar código';
+      }
+    }catch(e){
+      err.textContent='Error de conexión';
+      btn.disabled=false; btn.textContent='Generar código';
+    }
+  };
+}
+
+function showRevokeModal(codeHash, label){
+  const md = document.getElementById('modal');
+  md.innerHTML = `<div class="modal-bg" id="mbg"><div class="modal-sheet">
+    <h3>Revocar acceso</h3>
+    <p>¿Revocar el acceso de <b>${esc(label)}</b>? No podrá entrar a la app. No se puede deshacer.</p>
+    <div class="stack" style="margin-top:14px">
+      <button class="btn dan" id="mRevoke" style="justify-content:center">Revocar acceso</button>
+      <button class="btn sec" id="mClose" style="justify-content:center">Cancelar</button>
+    </div>
+  </div></div>`;
+
+  md.querySelector('#mClose').onclick = ()=>md.innerHTML='';
+  md.querySelector('#mbg').onclick = e=>{if(e.target===md.querySelector('#mbg'))md.innerHTML='';};
+
+  document.getElementById('mRevoke').onclick = async () => {
+    const btn = document.getElementById('mRevoke');
+    btn.disabled=true; btn.textContent='Revocando…';
+    try{
+      const r = await fetch(WORKER_URL+'/admin/revoke',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminSecret},
+        body:JSON.stringify({codeHash})
+      });
+      const d = await r.json();
+      if(d.ok){md.innerHTML='';await loadData();}
+      else{btn.disabled=false;btn.textContent='Revocar acceso';}
+    }catch(e){btn.disabled=false;btn.textContent='Revocar acceso';}
+  };
+}
+
+async function loadData(){
+  try{
+    const r = await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+adminSecret}});
+    if(r.ok){ data=await r.json(); render(); }
+    else if(r.status===401){ adminSecret=''; sessionStorage.removeItem('_adm'); render(); }
+  }catch(e){ console.error(e); }
+}
+
+render();
+</script>
+</body>
+</html>

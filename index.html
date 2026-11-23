@@ -183,6 +183,52 @@ const ROLES = {
 };
 const PAGE_H = 841.92, ANNEX_PAGE = 3;
 
+/* ---------- Acceso ---------- */
+const WORKER_URL='https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
+function getDeviceId(){let id=localStorage.getItem('_did');if(!id){id=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);localStorage.setItem('_did',id);}return id;}
+function getDeviceInfo(){try{return{ua:navigator.userAgent.slice(0,200),screen:screen.width+'x'+screen.height,lang:navigator.language,tz:Intl.DateTimeFormat().resolvedOptions().timeZone};}catch(e){return{};}}
+function logPdfExport(ev){const token=localStorage.getItem('_session');if(!token)return;fetch(WORKER_URL+'/log/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,aspirant:ev.aspirant,role:ev.role,examiner:ev.examiner,nEval:ev.nEval,fecha:ev.fecha})}).catch(()=>{});}
+function renderLogin(err){
+  document.getElementById('app').innerHTML=`<header class="top"><h1>Evaluación Árbitros<span class="sub">FVBCV · Acceso privado</span></h1></header>
+  <main style="display:grid;place-items:center;min-height:calc(100vh - 64px);padding:14px">
+  <div class="card" style="width:100%;max-width:360px">
+    <div class="brand"><div class="dot"></div><div><b>Evaluación Árbitros</b><span>Federació de Voleibol de la CV</span></div></div>
+    <label class="f" for="lCode">Código de acceso</label>
+    <input class="t" id="lCode" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" inputmode="text"
+      style="text-transform:uppercase;letter-spacing:.12em;font-size:22px;text-align:center;padding:14px">
+    <div id="lErr" style="color:var(--ko);font-size:13px;margin:8px 0 0;min-height:18px">${err||''}</div>
+    <button class="btn pri" id="lBtn" style="margin-top:10px">Entrar</button>
+    <div class="hint" style="text-align:center;margin-top:10px">Si no tienes código, contacta con el examinador jefe.</div>
+  </div></main>`;
+  const inp=document.getElementById('lCode'),btn=document.getElementById('lBtn'),errEl=document.getElementById('lErr');
+  inp.oninput=()=>{let v=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,'');if(v.length>4)v=v.slice(0,4)+'-'+v.slice(4,8);inp.value=v;errEl.textContent='';};
+  inp.onkeydown=e=>{if(e.key==='Enter')btn.click();};
+  btn.onclick=async()=>{
+    const code=inp.value.trim();if(!code){errEl.textContent='Introduce el código.';return;}
+    btn.disabled=true;btn.textContent='Comprobando…';errEl.textContent='';
+    try{
+      const r=await fetch(WORKER_URL+'/auth/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,deviceId:getDeviceId(),deviceInfo:getDeviceInfo()})});
+      const d=await r.json();
+      if(d.ok){localStorage.setItem('_session',d.token);render();}
+      else{errEl.textContent=d.error||'Código incorrecto';btn.disabled=false;btn.textContent='Entrar';}
+    }catch(e){errEl.textContent='Error de conexión. Comprueba internet.';btn.disabled=false;btn.textContent='Entrar';}
+  };
+}
+async function initApp(){
+  const token=localStorage.getItem('_session');
+  if(token){
+    const $a=document.getElementById('app');
+    $a.innerHTML='<div style="display:grid;place-items:center;min-height:100vh;color:var(--mute);font-size:14px">Verificando acceso…</div>';
+    try{
+      const r=await fetch(WORKER_URL+'/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+      const d=await r.json();
+      if(d.ok){render();return;}
+    }catch(e){}
+    localStorage.removeItem('_session');
+  }
+  renderLogin();
+}
+
 /* ---------- Almacenamiento ---------- */
 const KEY='evalArbitros.v1';
 let mem={examiner:'',evals:[]};
@@ -617,7 +663,7 @@ async function exportPdf(ev,fromFinal){
     const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000); ok=true; toast('PDF descargado: '+name);
   }
-  if(ok){lastPdf={id:ev.id,file,name};}
+  if(ok){lastPdf={id:ev.id,file,name};logPdfExport(ev);}
   if(fromFinal||(S.view==='eval'&&S.cur&&S.cur.id===ev.id)) render();
   else if(ok&&canShareFile(file)&&!dlNs) shareSheet();
 }
@@ -633,7 +679,7 @@ function shareSheet(){ // tras descargar desde el historial
   md.querySelector('#mNo').onclick=()=>md.innerHTML='';
 }
 window.__buildPdf=buildPdf; window.__cur=()=>S.cur; window.__ROLES=ROLES;
-render();
+initApp();
 </script>
 <!--PWA_SW-->
 </body>
