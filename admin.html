@@ -156,7 +156,8 @@ function appHtml(){
 
 function tabArbitros(codes){
   const sorted=[...codes].sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
-  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+  return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
+    <button class="btn sec" id="pdfBtn">⬇ Descargar PDF</button>
     <button class="btn pri" id="addBtn">＋ Añadir árbitro</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
@@ -209,6 +210,7 @@ function bindApp(){
   document.getElementById('logoutBtn').onclick=()=>{sessionStorage.removeItem('_adm');secret='';data=null;render();};
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();});
   const ab=document.getElementById('addBtn');if(ab)ab.onclick=showAddModal;
+  const pb=document.getElementById('pdfBtn');if(pb)pb.onclick=()=>downloadCodespdf(data.codes||[]);
   document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=()=>showRevokeModal(b.dataset.revoke,b.dataset.label));
   document.querySelectorAll('[data-reactivate]').forEach(b=>b.onclick=()=>doReactivate(b.dataset.reactivate,b.dataset.label));
 }
@@ -316,6 +318,39 @@ async function loadData(){
     if(r.ok){data=await r.json();render();}
     else if(r.status===401){sessionStorage.removeItem('_adm');secret='';render();}
   }catch(e){console.error(e);}
+}
+
+function downloadCodespdf(codes){
+  const sorted=[...codes].filter(c=>c.status!=='revoked').sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
+  const date=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const rows=sorted.map((c,i)=>`
+    <tr style="background:${i%2===0?'#f8f9fa':'#fff'}">
+      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb">${esc(c.label)}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.1em;color:#1b5fa8">${esc(c.code||'—')}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;color:${c.status==='active'?'#17844a':'#999'}">${c.status==='active'?'Activo':'Sin activar'}</td>
+    </tr>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>Árbitros FVBCV - Códigos de acceso</title>
+  <style>
+    body{font-family:system-ui,sans-serif;margin:40px;color:#1a1a1a}
+    h1{font-size:22px;margin:0 0 4px}
+    .sub{font-size:13px;color:#666;margin:0 0 24px}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th{background:#1b5fa8;color:#fff;padding:10px 14px;text-align:left;font-weight:600}
+    @media print{body{margin:20px}}
+  </style></head><body>
+  <h1>Árbitros FVBCV — Códigos de acceso</h1>
+  <p class="sub">Generado el ${date} · ${sorted.length} árbitros · Confidencial</p>
+  <table><thead><tr><th>Nombre</th><th>Código</th><th>Estado</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`;
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`arbitros-fvbcv-${date.replace(/\//g,'-')}.html`;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
 }
 
 render();
