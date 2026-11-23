@@ -261,10 +261,8 @@ function showAddModal(){
         if(!d.alreadyExists && !d.reactivated){
           if(!data.codes) data.codes=[];
           data.codes.push({label:name,status:'pending',code:d.code,deviceId:null,usedAt:null,createdAt:new Date().toISOString()});
-          render();
         }
-        // Sync with KV in background after a short delay
-        setTimeout(()=>loadData(),1500);
+        render();
       }else{
         err.textContent=d.error||'Error al generar';btn.disabled=false;btn.textContent='Generar código';
       }
