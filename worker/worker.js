@@ -64,7 +64,8 @@ export default {
       if (path === '/admin/data'       && request.method === 'GET')  return handleAdminData(env);
       if (path === '/admin/names'      && request.method === 'POST') return handleAddName(request, env);
       if (path === '/admin/revoke'     && request.method === 'POST') return handleRevoke(request, env);
-      if (path === '/admin/reactivate' && request.method === 'POST') return handleReactivate(request, env);
+      if (path === '/admin/reactivate'   && request.method === 'POST') return handleReactivate(request, env);
+      if (path === '/admin/multidevice'  && request.method === 'POST') return handleMultiDevice(request, env);
     }
 
     return json({ error: 'Not found' }, 404, env);
@@ -216,6 +217,19 @@ async function handleRevoke(request, env) {
   if (!record) return json({ error: 'No encontrado' }, 404, env);
 
   record.status = 'revoked';
+  await env.EVAL_KV.put(`c:${codeHash}`, JSON.stringify(record));
+  return json({ ok: true }, 200, env);
+}
+
+async function handleMultiDevice(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Petición inválida' }, 400, env); }
+  const { codeHash } = body;
+  const record = await env.EVAL_KV.get(`c:${codeHash}`, 'json');
+  if (!record) return json({ error: 'No encontrado' }, 404, env);
+  record.status = 'active';
+  record.deviceId = null;
+  record.deviceInfo = null;
   await env.EVAL_KV.put(`c:${codeHash}`, JSON.stringify(record));
   return json({ ok: true }, 200, env);
 }
