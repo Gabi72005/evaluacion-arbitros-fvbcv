@@ -6,10 +6,10 @@
 <title>Admin · Evaluación Árbitros FVBCV</title>
 <style>
 :root{
-  --blue:#1b5fa8; --blue-d:#134a85; --blue-l:#e8f0fa;
+  --blue:#1E20E8; --blue-d:#1515C8; --blue-l:#EEEEFF;
   --ok:#17844a; --ok-l:#e3f4ea; --ko:#c62f2f; --ko-l:#fbe7e7;
   --ink:#16202c; --mute:#5d6b7a; --line:#dde3ea; --bg:#f3f5f8; --card:#fff;
-  --orange:#f29a1d;
+  --orange:#F08500; --gold:#FFD000;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
@@ -55,9 +55,9 @@ tr:last-child td{border-bottom:0}
 .tab.on{color:var(--blue);border-bottom-color:var(--blue)}
 .login-wrap{display:grid;place-items:center;min-height:100vh;padding:14px}
 .login-card{background:var(--card);border-radius:16px;padding:22px;width:100%;max-width:340px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(16,32,44,.08)}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.brand .dot{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 18%,var(--orange) 19% 45%,var(--blue) 46%);flex:none}
-.brand b{display:block;font-size:16px}.brand span{font-size:12px;color:var(--mute)}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.brand img{width:48px;height:48px;object-fit:contain;flex:none}
+.brand b{display:block;font-size:16px;color:var(--blue)}.brand span{font-size:12px;color:var(--mute)}
 label.f{display:block;font-size:11px;color:var(--mute);margin:10px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .acts{display:flex;gap:6px;flex-wrap:wrap}
 @media(max-width:580px){.hide{display:none}table{font-size:12px}td,th{padding:7px 6px}}
@@ -101,7 +101,7 @@ function render(){
 /* ---- LOGIN ---- */
 function loginHtml(){
   return `<div class="login-wrap"><div class="login-card">
-    <div class="brand"><div class="dot"></div><div><b>Panel Admin</b><span>Evaluación Árbitros FVBCV</span></div></div>
+    <div class="brand"><img src="fvbcv-logo.png" alt="FVBCV"><div><b>Panel Admin</b><span>Evaluación Árbitros FVBCV</span></div></div>
     <label class="f" for="sec">Contraseña</label>
     <input class="t" type="password" id="sec" placeholder="••••••••">
     <div id="lErr" style="color:var(--ko);font-size:13px;margin:6px 0 0;min-height:16px"></div>
@@ -133,6 +133,7 @@ function appHtml(){
 
   return `<div class="app">
   <header>
+    <img src="fvbcv-logo.png" alt="FVBCV" style="height:36px;width:36px;object-fit:contain;flex:none">
     <h1>Panel Admin<span class="sub">Evaluación Árbitros FVBCV</span></h1>
     <button class="iconbtn" id="refreshBtn">↻</button>
     <button class="iconbtn" id="logoutBtn" style="margin-left:4px">Salir</button>
@@ -326,7 +327,7 @@ function downloadCodespdf(codes){
   const rows=sorted.map((c,i)=>`
     <tr style="background:${i%2===0?'#f8f9fa':'#fff'}">
       <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb">${esc(c.label)}</td>
-      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.1em;color:#1b5fa8">${esc(c.code||'—')}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.1em;color:#1E20E8">${esc(c.code||'—')}</td>
       <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;color:${c.status==='active'?'#17844a':'#999'}">${c.status==='active'?'Activo':'Sin activar'}</td>
     </tr>`).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -336,7 +337,7 @@ function downloadCodespdf(codes){
     h1{font-size:22px;margin:0 0 4px}
     .sub{font-size:13px;color:#666;margin:0 0 24px}
     table{width:100%;border-collapse:collapse;font-size:14px}
-    th{background:#1b5fa8;color:#fff;padding:10px 14px;text-align:left;font-weight:600}
+    th{background:#1E20E8;color:#fff;padding:10px 14px;text-align:left;font-weight:600}
     @media print{body{margin:20px}}
   </style></head><body>
   <h1>Árbitros FVBCV — Códigos de acceso</h1>

@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1b5fa8">
+<meta name="theme-color" content="#1E20E8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Evaluación">
 <title>Evaluación Árbitros FVBCV</title>
 <!--PWA_HEAD-->
 <style>
 :root{
-  --blue:#1b5fa8; --blue-d:#134a85; --blue-l:#e8f0fa;
+  --blue:#1E20E8; --blue-d:#1515C8; --blue-l:#EEEEFF;
   --ok:#17844a; --ok-l:#e3f4ea; --ko:#c62f2f; --ko-l:#fbe7e7;
   --ink:#16202c; --mute:#5d6b7a; --line:#dde3ea; --bg:#f3f5f8; --card:#fff;
-  --orange:#f29a1d;
+  --orange:#F08500; --gold:#FFD000;
   --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -103,9 +103,9 @@ nav.tabs button.on{background:var(--blue-l);color:var(--blue-d)}
 .modal p{margin:0 0 14px;color:var(--mute)}
 .toast{position:fixed;left:50%;top:calc(70px + var(--safe-t));transform:translateX(-50%);background:#16202c;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;max-width:90vw;text-align:center}
 .hidden{display:none!important}
-.brand{display:flex;align-items:center;gap:10px;margin:2px 2px 14px}
-.brand .dot{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 18%,var(--orange) 19% 45%,var(--blue) 46%);flex:none}
-.brand b{display:block;font-size:17px}
+.brand{display:flex;align-items:center;gap:12px;margin:2px 2px 16px}
+.brand img{width:48px;height:48px;object-fit:contain;flex:none}
+.brand b{display:block;font-size:17px;color:var(--blue)}
 .brand span{font-size:13px;color:var(--mute)}
 </style>
 </head>
@@ -189,10 +189,10 @@ function getDeviceId(){let id=localStorage.getItem('_did');if(!id){id=typeof cry
 function getDeviceInfo(){try{return{ua:navigator.userAgent.slice(0,200),screen:screen.width+'x'+screen.height,lang:navigator.language,tz:Intl.DateTimeFormat().resolvedOptions().timeZone};}catch(e){return{};}}
 function logPdfExport(ev){const token=localStorage.getItem('_session');if(!token)return;fetch(WORKER_URL+'/log/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,aspirant:ev.aspirant,role:ev.role,examiner:ev.examiner,nEval:ev.nEval,fecha:ev.fecha})}).catch(()=>{});}
 function renderLogin(err){
-  document.getElementById('app').innerHTML=`<header class="top"><h1>Evaluación Árbitros<span class="sub">FVBCV · Acceso privado</span></h1></header>
+  document.getElementById('app').innerHTML=`<header class="top"><img src="fvbcv-logo.png" alt="FVBCV" style="height:36px;width:36px;object-fit:contain;flex:none"><h1>Evaluación Árbitros<span class="sub">FVBCV · Acceso privado</span></h1></header>
   <main style="display:grid;place-items:center;min-height:calc(100vh - 64px);padding:14px">
   <div class="card" style="width:100%;max-width:360px">
-    <div class="brand"><div class="dot"></div><div><b>Evaluación Árbitros</b><span>Federació de Voleibol de la CV</span></div></div>
+    <div class="brand" style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><img src="fvbcv-logo.png" alt="FVBCV" style="width:52px;height:52px;object-fit:contain"><div><b style="display:block;font-size:16px;color:var(--blue)">Evaluación Árbitros</b><span style="font-size:12px;color:var(--mute)">Federación de Voleibol de la CV</span></div></div>
     <label class="f" for="lCode">Código de acceso</label>
     <input class="t" id="lCode" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" inputmode="text"
       style="text-transform:uppercase;letter-spacing:.12em;font-size:22px;text-align:center;padding:14px">
@@ -284,7 +284,7 @@ function render(){
 function renderHome(){
   const list=[...mem.evals].sort((a,b)=>b.updated-a.updated);
   $app.innerHTML=`
-  <header class="top"><h1>Evaluación de árbitros<span class="sub">FVBCV · Plantilla examinador</span></h1></header>
+  <header class="top"><img src="fvbcv-logo.png" alt="FVBCV" style="height:34px;width:34px;object-fit:contain;flex:none"><h1>Evaluación de árbitros<span class="sub">FVBCV · Plantilla examinador</span></h1></header>
   <main>
     <div class="card">
       <h2>Examinador</h2>
