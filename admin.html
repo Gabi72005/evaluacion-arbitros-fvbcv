@@ -257,7 +257,14 @@ function showAddModal(){
           ${extra}`;
         btn.classList.add('hidden');
         document.getElementById('mClose').textContent='Cerrar';
-        await loadData();
+        // Optimistic update: add to local list immediately (KV has eventual consistency)
+        if(!d.alreadyExists && !d.reactivated){
+          if(!data.codes) data.codes=[];
+          data.codes.push({label:name,status:'pending',code:d.code,deviceId:null,usedAt:null,createdAt:new Date().toISOString()});
+          render();
+        }
+        // Sync with KV in background after a short delay
+        setTimeout(()=>loadData(),1500);
       }else{
         err.textContent=d.error||'Error al generar';btn.disabled=false;btn.textContent='Generar código';
       }
