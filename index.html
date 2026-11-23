@@ -220,7 +220,10 @@ async function initApp(){
     const $a=document.getElementById('app');
     $a.innerHTML='<div style="display:grid;place-items:center;min-height:100vh;color:var(--mute);font-size:14px">Verificando acceso…</div>';
     try{
-      const r=await fetch(WORKER_URL+'/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+      const ctrl=new AbortController();
+      const tid=setTimeout(()=>ctrl.abort(),8000);
+      const r=await fetch(WORKER_URL+'/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token}),signal:ctrl.signal});
+      clearTimeout(tid);
       const d=await r.json();
       if(d.ok){if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}render();return;}
     }catch(e){}
