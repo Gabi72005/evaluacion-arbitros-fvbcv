@@ -65,7 +65,8 @@ export default {
       if (path === '/admin/names'      && request.method === 'POST') return handleAddName(request, env);
       if (path === '/admin/revoke'     && request.method === 'POST') return handleRevoke(request, env);
       if (path === '/admin/reactivate'   && request.method === 'POST') return handleReactivate(request, env);
-      if (path === '/admin/multidevice'  && request.method === 'POST') return handleMultiDevice(request, env);
+      if (path === '/admin/multidevice'   && request.method === 'POST') return handleMultiDevice(request, env);
+      if (path === '/admin/create-fixed'  && request.method === 'POST') return handleCreateFixed(request, env);
     }
 
     return json({ error: 'Not found' }, 404, env);
@@ -219,6 +220,23 @@ async function handleRevoke(request, env) {
   record.status = 'revoked';
   await env.EVAL_KV.put(`c:${codeHash}`, JSON.stringify(record));
   return json({ ok: true }, 200, env);
+}
+
+async function handleCreateFixed(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Petición inválida' }, 400, env); }
+  const { label, code } = body;
+  if (!label || !code) return json({ error: 'Faltan datos' }, 400, env);
+  const normalized = String(code).trim().toUpperCase().replace(/[^0-9A-F]/g, '');
+  if (normalized.length !== 8) return json({ error: 'Código debe ser 8 dígitos hex' }, 400, env);
+  const hash = await sha256hex(normalized);
+  const existing = await env.EVAL_KV.get(`c:${hash}`, 'json');
+  if (existing) return json({ ok: true, codeHash: hash, alreadyExists: true }, 200, env);
+  await env.EVAL_KV.put(`c:${hash}`, JSON.stringify({
+    id: randomHex(8), codeHash: hash, label: label.trim(),
+    status: 'active', deviceId: null, deviceInfo: null, usedAt: null, createdAt: nowIso(),
+  }));
+  return json({ ok: true, codeHash: hash }, 200, env);
 }
 
 async function handleMultiDevice(request, env) {
