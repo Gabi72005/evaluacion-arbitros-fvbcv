@@ -13,64 +13,62 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-button,input,textarea,select{font:inherit;color:inherit}
-button{cursor:pointer}
-.app{max-width:860px;margin:0 auto;min-height:100vh;padding:0 0 40px}
-header{background:var(--blue);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:20px}
-header h1{margin:0;font-size:18px;font-weight:700;flex:1}
-header .sub{font-size:12px;opacity:.8;font-weight:400;display:block}
-.iconbtn{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:9px;height:38px;padding:0 12px;font-size:14px;font-weight:600;white-space:nowrap}
-.wrap{padding:0 16px}
-.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid var(--line);box-shadow:0 1px 2px rgba(16,32,44,.06)}
-.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--blue-d);margin:0 0 12px;font-weight:700}
-input.t,select.t{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;font-size:15px}
-input.t:focus,select.t:focus{outline:none;border-color:var(--blue)}
-.btn{border:0;border-radius:11px;padding:11px 16px;font-weight:650;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.btn.pri{background:var(--blue);color:#fff}
-.btn.pri:active{background:var(--blue-d)}
+button,input{font:inherit;color:inherit}button{cursor:pointer}
+.app{max-width:860px;margin:0 auto;min-height:100vh;padding-bottom:40px}
+header{background:var(--blue);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;margin-bottom:18px}
+header h1{margin:0;font-size:17px;font-weight:700;flex:1}
+header .sub{font-size:11px;opacity:.8;font-weight:400;display:block}
+.iconbtn{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:9px;height:36px;padding:0 12px;font-size:13px;font-weight:600}
+.wrap{padding:0 14px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid var(--line);box-shadow:0 1px 2px rgba(16,32,44,.06)}
+input.t{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;font-size:15px}
+input.t:focus{outline:none;border-color:var(--blue)}
+.btn{border:0;border-radius:11px;padding:10px 16px;font-weight:650;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:var(--blue);color:#fff}.btn.pri:active{background:var(--blue-d)}
 .btn.dan{background:var(--ko);color:#fff}
+.btn.ok2{background:var(--ok);color:#fff}
 .btn.sec{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
-.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap}
-.pill.ok{background:var(--ok-l);color:var(--ok)}
-.pill.ko{background:var(--ko-l);color:var(--ko)}
-.pill.na{background:#eceff3;color:var(--mute)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
-.stat .n{font-size:28px;font-weight:800;color:var(--blue);line-height:1}
-.stat .l{font-size:12px;color:var(--mute);margin-top:4px}
+.btn[disabled]{opacity:.5;cursor:default}
+.pill{display:inline-flex;align-items:center;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.pill.ok{background:var(--ok-l);color:var(--ok)}.pill.ko{background:var(--ko-l);color:var(--ko)}.pill.na{background:#eceff3;color:var(--mute)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.stat .n{font-size:26px;font-weight:800;color:var(--blue);line-height:1}
+.stat .l{font-size:11px;color:var(--mute);margin-top:3px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;color:var(--mute);font-weight:700;border-bottom:1.5px solid var(--line);white-space:nowrap}
-td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 tr:last-child td{border-bottom:0}
-.ua{font-size:11px;color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.code{font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.08em;color:var(--blue-d);background:var(--blue-l);border-radius:7px;padding:3px 8px}
+.ua{font-size:11px;color:var(--mute);margin-top:2px}
 .ts{font-size:12px;color:var(--mute)}
 .empty{color:var(--mute);font-size:14px;text-align:center;padding:20px}
 .modal-bg{position:fixed;inset:0;background:rgba(10,20,30,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .modal-sheet{background:#fff;width:100%;max-width:500px;border-radius:18px 18px 0 0;padding:20px 18px 28px}
-.modal-sheet h3{margin:0 0 8px;font-size:18px}
-.modal-sheet p{margin:0 0 14px;color:var(--mute);font-size:14px}
-.code-box{background:var(--blue-l);border:1.5px solid var(--blue);border-radius:12px;padding:16px;text-align:center;margin:14px 0;font-size:28px;font-weight:800;letter-spacing:.15em;color:var(--blue-d);font-family:monospace}
-.hint{font-size:13px;color:var(--mute);margin-top:6px}
+.modal-sheet h3{margin:0 0 6px;font-size:18px}
+.modal-sheet p{margin:0 0 12px;color:var(--mute);font-size:14px}
+.code-box{background:var(--blue-l);border:2px solid var(--blue);border-radius:12px;padding:16px;text-align:center;margin:12px 0;font-size:30px;font-weight:800;letter-spacing:.18em;color:var(--blue-d);font-family:monospace}
+.hint{font-size:13px;color:var(--mute);margin-top:5px}
 .stack>*+*{margin-top:8px}
-.tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1.5px solid var(--line);padding-bottom:0}
-.tab{border:0;background:transparent;padding:10px 14px;font-size:14px;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1.5px solid var(--line)}
+.tab{border:0;background:transparent;padding:9px 14px;font-size:14px;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
 .tab.on{color:var(--blue);border-bottom-color:var(--blue)}
 .login-wrap{display:grid;place-items:center;min-height:100vh;padding:14px}
-.login-card{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:360px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(16,32,44,.08)}
-.brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-.brand .dot{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 18%,var(--orange) 19% 45%,var(--blue) 46%);flex:none}
-.brand b{display:block;font-size:17px}
-.brand span{font-size:12px;color:var(--mute)}
-label.f{display:block;font-size:12px;color:var(--mute);margin:12px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-@media(max-width:600px){th.hide,td.hide{display:none}table{font-size:12px}td{padding:8px 6px}}
+.login-card{background:var(--card);border-radius:16px;padding:22px;width:100%;max-width:340px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(16,32,44,.08)}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.brand .dot{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 18%,var(--orange) 19% 45%,var(--blue) 46%);flex:none}
+.brand b{display:block;font-size:16px}.brand span{font-size:12px;color:var(--mute)}
+label.f{display:block;font-size:11px;color:var(--mute);margin:10px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:580px){.hide{display:none}table{font-size:12px}td,th{padding:7px 6px}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script>
 const WORKER_URL = 'https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
-let adminSecret = sessionStorage.getItem('_adm') || '';
-let activeTab = 'codes';
+let secret = sessionStorage.getItem('_adm') || '';
+let tab = 'arbitros';
 let data = null;
 
 const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -78,10 +76,10 @@ const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>
 function fmtDate(iso){
   if(!iso) return '—';
   try{
-    const d = new Date(iso);
-    return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' +
+    const d=new Date(iso);
+    return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+
            d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){return iso;}
+  }catch{return iso;}
 }
 
 function parseBrowser(ua){
@@ -94,251 +92,222 @@ function parseBrowser(ua){
 }
 
 function render(){
-  const root = document.getElementById('root');
-  if(!adminSecret){ root.innerHTML = renderLogin(); bindLogin(); return; }
-  root.innerHTML = renderApp();
+  const root=document.getElementById('root');
+  if(!secret){root.innerHTML=loginHtml();bindLogin();return;}
+  root.innerHTML=appHtml();
   bindApp();
 }
 
-function renderLogin(){
+/* ---- LOGIN ---- */
+function loginHtml(){
   return `<div class="login-wrap"><div class="login-card">
-    <div class="brand"><div class="dot"></div><div><b>Panel de Admin</b><span>Evaluación Árbitros FVBCV</span></div></div>
-    <label class="f" for="sec">Contraseña de administrador</label>
-    <input class="t" type="password" id="sec" placeholder="••••••••••••">
-    <div id="lErr" style="color:var(--ko);font-size:13px;margin:8px 0 0;min-height:18px"></div>
-    <button class="btn pri" id="lBtn" style="width:100%;margin-top:12px;justify-content:center">Entrar</button>
+    <div class="brand"><div class="dot"></div><div><b>Panel Admin</b><span>Evaluación Árbitros FVBCV</span></div></div>
+    <label class="f" for="sec">Contraseña</label>
+    <input class="t" type="password" id="sec" placeholder="••••••••">
+    <div id="lErr" style="color:var(--ko);font-size:13px;margin:6px 0 0;min-height:16px"></div>
+    <button class="btn pri" id="lBtn" style="width:100%;margin-top:10px;justify-content:center">Entrar</button>
   </div></div>`;
 }
-
 function bindLogin(){
-  const inp = document.getElementById('sec');
-  const btn = document.getElementById('lBtn');
-  const err = document.getElementById('lErr');
-  inp.onkeydown = e => { if(e.key==='Enter') btn.click(); };
-  btn.onclick = async () => {
-    const secret = inp.value.trim();
-    if(!secret) return;
-    btn.disabled = true; btn.textContent = 'Verificando…';
+  const inp=document.getElementById('sec'),btn=document.getElementById('lBtn'),err=document.getElementById('lErr');
+  inp.onkeydown=e=>{if(e.key==='Enter')btn.click();};
+  btn.onclick=async()=>{
+    const s=inp.value.trim();if(!s)return;
+    btn.disabled=true;btn.textContent='Verificando…';
     try{
-      const r = await fetch(WORKER_URL+'/admin/data', {headers:{'Authorization':'Bearer '+secret}});
-      if(r.ok){
-        adminSecret = secret;
-        sessionStorage.setItem('_adm', secret);
-        data = await r.json();
-        render();
-      } else {
-        err.textContent = 'Contraseña incorrecta';
-        btn.disabled = false; btn.textContent = 'Entrar';
-      }
-    }catch(e){
-      err.textContent = 'Error de conexión';
-      btn.disabled = false; btn.textContent = 'Entrar';
-    }
+      const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+s}});
+      if(r.ok){secret=s;sessionStorage.setItem('_adm',s);data=await r.json();render();}
+      else{err.textContent='Contraseña incorrecta';btn.disabled=false;btn.textContent='Entrar';}
+    }catch{err.textContent='Error de conexión';btn.disabled=false;btn.textContent='Entrar';}
   };
 }
 
-function renderApp(){
+/* ---- APP ---- */
+function appHtml(){
   if(!data) return '<div class="wrap"><p class="empty">Cargando…</p></div>';
+  const codes=data.codes||[], logs=data.logs||[];
+  const active=codes.filter(c=>c.status==='active').length;
+  const pending=codes.filter(c=>c.status==='pending').length;
+  const revoked=codes.filter(c=>c.status==='revoked').length;
+  const pdfsHoy=logs.filter(l=>l.type==='pdf'&&(l.timestamp||'').startsWith(new Date().toISOString().slice(0,10))).length;
 
-  const codes = data.codes || [];
-  const logs = data.logs || [];
-  const active = codes.filter(c=>c.status==='active').length;
-  const pending = codes.filter(c=>c.status==='pending').length;
-  const revoked = codes.filter(c=>c.status==='revoked').length;
-  const pdfsToday = logs.filter(l=>l.type==='pdf'&&l.timestamp&&l.timestamp.startsWith(new Date().toISOString().slice(0,10))).length;
-
-  return `
+  return `<div class="app">
   <header>
-    <h1>Panel de Admin<span class="sub">Evaluación Árbitros FVBCV</span></h1>
-    <button class="iconbtn" id="refreshBtn">↻ Actualizar</button>
-    <button class="iconbtn" id="logoutBtn" style="margin-left:6px">Salir</button>
+    <h1>Panel Admin<span class="sub">Evaluación Árbitros FVBCV</span></h1>
+    <button class="iconbtn" id="refreshBtn">↻</button>
+    <button class="iconbtn" id="logoutBtn" style="margin-left:4px">Salir</button>
   </header>
   <div class="wrap">
     <div class="stats">
-      <div class="stat"><div class="n">${codes.length}</div><div class="l">Códigos total</div></div>
+      <div class="stat"><div class="n">${codes.length}</div><div class="l">Árbitros</div></div>
       <div class="stat"><div class="n" style="color:var(--ok)">${active}</div><div class="l">Activos</div></div>
       <div class="stat"><div class="n" style="color:var(--orange)">${pending}</div><div class="l">Sin activar</div></div>
       <div class="stat"><div class="n" style="color:var(--ko)">${revoked}</div><div class="l">Revocados</div></div>
-      <div class="stat"><div class="n">${pdfsToday}</div><div class="l">PDFs hoy</div></div>
+      <div class="stat"><div class="n">${pdfsHoy}</div><div class="l">PDFs hoy</div></div>
     </div>
-
     <div class="tabs">
-      <button class="tab ${activeTab==='codes'?'on':''}" data-tab="codes">Códigos de acceso</button>
-      <button class="tab ${activeTab==='logs'?'on':''}" data-tab="logs">Actividad</button>
+      <button class="tab ${tab==='arbitros'?'on':''}" data-tab="arbitros">Árbitros</button>
+      <button class="tab ${tab==='actividad'?'on':''}" data-tab="actividad">Actividad</button>
     </div>
-
-    ${activeTab==='codes' ? renderCodesTab(codes) : renderLogsTab(logs)}
+    ${tab==='arbitros' ? tabArbitros(codes) : tabActividad(logs)}
   </div>
-
-  <div id="modal"></div>`;
+  <div id="modal"></div></div>`;
 }
 
-function renderCodesTab(codes){
-  const sorted = [...codes].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
-  return `
-  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-    <button class="btn pri" id="newCodeBtn">＋ Nuevo código</button>
+function tabArbitros(codes){
+  const sorted=[...codes].sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <button class="btn pri" id="addBtn">＋ Añadir árbitro</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-    ${sorted.length ? `<table>
-      <thead><tr>
-        <th>Para quién</th>
-        <th>Estado</th>
-        <th class="hide">Dispositivo</th>
-        <th class="hide">Último acceso</th>
-        <th>Acción</th>
-      </tr></thead>
-      <tbody>${sorted.map(c => `<tr>
-        <td><b>${esc(c.label)}</b><div class="ts">Creado ${fmtDate(c.createdAt)}</div></td>
-        <td>${statusPill(c.status)}</td>
-        <td class="hide">
-          ${c.deviceInfo ? `${parseBrowser(c.deviceInfo.ua)}<div class="ua">${esc(c.deviceInfo.screen||'')} · ${esc(c.deviceInfo.lang||'')}</div>` : '<span style="color:var(--mute)">—</span>'}
-        </td>
-        <td class="hide"><span class="ts">${c.usedAt ? fmtDate(c.usedAt) : '—'}</span></td>
-        <td>${c.status!=='revoked'
-          ? `<button class="btn dan" data-revoke="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:7px 12px">Revocar</button>`
-          : '<span style="color:var(--mute);font-size:12px">Revocado</span>'
-        }</td>
-      </tr>`).join('')}</tbody>
-    </table>` : '<div class="empty">No hay códigos. Crea el primero.</div>'}
+  ${sorted.length?`<table>
+    <thead><tr>
+      <th>Nombre</th><th>Código</th><th>Estado</th>
+      <th class="hide">Dispositivo</th><th class="hide">Último acceso</th><th></th>
+    </tr></thead>
+    <tbody>${sorted.map(c=>`<tr>
+      <td><b>${esc(c.label)}</b></td>
+      <td><span class="code">${esc(c.code||'...')}</span></td>
+      <td>${statusPill(c.status)}</td>
+      <td class="hide">${c.deviceInfo?`${parseBrowser(c.deviceInfo.ua)}<div class="ua">${esc(c.deviceInfo.screen||'')} · ${esc(c.deviceInfo.lang||'')}</div>`:'<span class="ts">—</span>'}</td>
+      <td class="hide"><span class="ts">${c.usedAt?fmtDate(c.usedAt):'—'}</span></td>
+      <td><div class="acts">
+        ${c.status!=='revoked'
+          ?`<button class="btn dan" data-revoke="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Revocar</button>`
+          :`<button class="btn ok2" data-reactivate="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Reactivar</button>`}
+      </div></td>
+    </tr>`).join('')}</tbody>
+  </table>` : '<div class="empty">No hay árbitros. Añade el primero.</div>'}
   </div>`;
 }
 
-function renderLogsTab(logs){
-  const logsFiltered = logs.filter(Boolean);
+function tabActividad(logs){
   return `<div class="card" style="padding:0;overflow:hidden">
-    ${logsFiltered.length ? `<table>
-      <thead><tr>
-        <th>Tipo</th>
-        <th>Árbitro / Examinador</th>
-        <th class="hide">Detalles</th>
-        <th>Fecha</th>
-      </tr></thead>
-      <tbody>${logsFiltered.map(l => `<tr>
-        <td>${l.type==='pdf'
-          ? '<span class="pill ok">📄 PDF</span>'
-          : '<span class="pill na">🔑 Login</span>'}</td>
-        <td>
-          <b>${esc(l.label||'—')}</b>
-          ${l.type==='pdf' ? `<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+l.nEval+'ª':''}</div>` : ''}
-          ${l.type==='login' && l.deviceInfo ? `<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>` : ''}
-        </td>
-        <td class="hide">
-          ${l.type==='pdf' ? `<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>` : ''}
-          ${l.type==='login' && l.deviceInfo ? `<div class="ua">${esc(l.deviceInfo.tz||'')}</div>` : ''}
-        </td>
-        <td><span class="ts">${fmtDate(l.timestamp)}</span></td>
-      </tr>`).join('')}</tbody>
-    </table>` : '<div class="empty">Sin actividad todavía.</div>'}
+  ${logs.length?`<table>
+    <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th></tr></thead>
+    <tbody>${logs.map(l=>`<tr>
+      <td>${l.type==='pdf'?'<span class="pill ok">📄 PDF</span>':'<span class="pill na">🔑 Login</span>'}</td>
+      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+l.nEval+'ª':''}</div>`:''}
+          ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
+      <td class="hide">${l.type==='pdf'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
+          ${l.type==='login'&&l.deviceInfo?`<div class="ts">${esc(l.deviceInfo.tz||'')}</div>`:''}</td>
+      <td><span class="ts">${fmtDate(l.timestamp)}</span></td>
+    </tr>`).join('')}</tbody>
+  </table>` : '<div class="empty">Sin actividad todavía.</div>'}
   </div>`;
 }
 
-function statusPill(status){
-  if(status==='active') return '<span class="pill ok">✓ Activo</span>';
-  if(status==='pending') return '<span class="pill na">⏳ Sin activar</span>';
-  if(status==='revoked') return '<span class="pill ko">✗ Revocado</span>';
-  return '<span class="pill na">'+esc(status)+'</span>';
+function statusPill(s){
+  if(s==='active')  return '<span class="pill ok">✓ Activo</span>';
+  if(s==='pending') return '<span class="pill na">⏳ Sin activar</span>';
+  if(s==='revoked') return '<span class="pill ko">✗ Revocado</span>';
+  return `<span class="pill na">${esc(s)}</span>`;
 }
 
 function bindApp(){
-  document.getElementById('refreshBtn').onclick = loadData;
-  document.getElementById('logoutBtn').onclick = () => {
-    sessionStorage.removeItem('_adm'); adminSecret=''; data=null; render();
-  };
-  document.querySelectorAll('[data-tab]').forEach(b => b.onclick=()=>{activeTab=b.dataset.tab;render();});
-  const nb = document.getElementById('newCodeBtn');
-  if(nb) nb.onclick = showCreateModal;
-  document.querySelectorAll('[data-revoke]').forEach(b => b.onclick=()=>showRevokeModal(b.dataset.revoke, b.dataset.label));
+  document.getElementById('refreshBtn').onclick=loadData;
+  document.getElementById('logoutBtn').onclick=()=>{sessionStorage.removeItem('_adm');secret='';data=null;render();};
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();});
+  const ab=document.getElementById('addBtn');if(ab)ab.onclick=showAddModal;
+  document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=()=>showRevokeModal(b.dataset.revoke,b.dataset.label));
+  document.querySelectorAll('[data-reactivate]').forEach(b=>b.onclick=()=>doReactivate(b.dataset.reactivate,b.dataset.label));
 }
 
-function showCreateModal(){
-  const md = document.getElementById('modal');
-  md.innerHTML = `<div class="modal-bg" id="mbg"><div class="modal-sheet">
-    <h3>Nuevo código de acceso</h3>
-    <p>El código se genera automáticamente y se puede usar una sola vez en un dispositivo.</p>
-    <label class="f" for="mlabel">Para quién es</label>
-    <input class="t" id="mlabel" placeholder="Nombre y apellidos del árbitro">
-    <div id="mErr" style="color:var(--ko);font-size:13px;margin:8px 0;min-height:18px"></div>
-    <div id="mResult" class="hidden"></div>
-    <div class="stack" style="margin-top:14px">
-      <button class="btn pri" id="mCreate" style="justify-content:center">Generar código</button>
+/* ---- MODALES ---- */
+function showAddModal(){
+  const md=document.getElementById('modal');
+  md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet">
+    <h3>Añadir árbitro</h3>
+    <p>El código se genera a partir del nombre y siempre es el mismo para la misma persona.</p>
+    <label class="f" for="mname">Nombre completo</label>
+    <input class="t" id="mname" placeholder="Nombre y apellidos" autocomplete="off">
+    <div id="mErr" style="color:var(--ko);font-size:13px;margin:6px 0;min-height:16px"></div>
+    <div id="mResult"></div>
+    <div class="stack" style="margin-top:12px">
+      <button class="btn pri" id="mAdd" style="justify-content:center">Generar código</button>
       <button class="btn sec" id="mClose" style="justify-content:center">Cancelar</button>
     </div>
   </div></div>`;
 
-  md.querySelector('#mClose').onclick = ()=>md.innerHTML='';
-  md.querySelector('#mbg').onclick = e=>{if(e.target===md.querySelector('#mbg'))md.innerHTML='';};
-  document.getElementById('mlabel').onkeydown = e=>{if(e.key==='Enter')document.getElementById('mCreate').click();};
+  const close=()=>md.innerHTML='';
+  md.querySelector('#mClose').onclick=close;
+  md.querySelector('#mbg').onclick=e=>{if(e.target===md.querySelector('#mbg'))close();};
+  document.getElementById('mname').onkeydown=e=>{if(e.key==='Enter')document.getElementById('mAdd').click();};
+  document.getElementById('mname').focus();
 
-  document.getElementById('mCreate').onclick = async () => {
-    const label = document.getElementById('mlabel').value.trim();
-    const err = document.getElementById('mErr');
-    if(!label){err.textContent='Escribe el nombre.';return;}
-    const btn = document.getElementById('mCreate');
-    btn.disabled=true; btn.textContent='Generando…';
+  document.getElementById('mAdd').onclick=async()=>{
+    const name=document.getElementById('mname').value.trim();
+    const err=document.getElementById('mErr');
+    if(!name){err.textContent='Escribe el nombre.';return;}
+    const btn=document.getElementById('mAdd');
+    btn.disabled=true;btn.textContent='Generando…';
     try{
-      const r = await fetch(WORKER_URL+'/admin/codes',{
+      const r=await fetch(WORKER_URL+'/admin/names',{
         method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminSecret},
-        body:JSON.stringify({label})
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
+        body:JSON.stringify({name})
       });
-      const d = await r.json();
+      const d=await r.json();
       if(d.ok){
-        document.getElementById('mResult').innerHTML = `
+        const extra=d.alreadyExists?'<div class="hint" style="text-align:center;margin-top:4px">Ya existía en la lista. Este es su código.</div>'
+                   :d.reactivated?'<div class="hint" style="text-align:center;margin-top:4px">Código reactivado.</div>':'';
+        document.getElementById('mResult').innerHTML=`
           <div class="code-box">${esc(d.code)}</div>
-          <p style="font-size:14px;text-align:center;margin:0;color:var(--mute)">Envía este código a <b>${esc(label)}</b> por WhatsApp o correo.<br>Solo se muestra una vez.</p>`;
-        document.getElementById('mResult').classList.remove('hidden');
-        document.getElementById('mCreate').classList.add('hidden');
-        document.querySelector('.modal-sheet p').textContent='Código generado.';
+          <p style="font-size:14px;text-align:center;margin:0">Envía este código a <b>${esc(name)}</b>.</p>
+          ${extra}`;
+        btn.classList.add('hidden');
         document.getElementById('mClose').textContent='Cerrar';
         await loadData();
-      } else {
-        err.textContent = d.error || 'Error al generar';
-        btn.disabled=false; btn.textContent='Generar código';
+      }else{
+        err.textContent=d.error||'Error al generar';btn.disabled=false;btn.textContent='Generar código';
       }
-    }catch(e){
-      err.textContent='Error de conexión';
-      btn.disabled=false; btn.textContent='Generar código';
-    }
+    }catch{err.textContent='Error de conexión';btn.disabled=false;btn.textContent='Generar código';}
   };
 }
 
-function showRevokeModal(codeHash, label){
-  const md = document.getElementById('modal');
-  md.innerHTML = `<div class="modal-bg" id="mbg"><div class="modal-sheet">
+function showRevokeModal(codeHash,label){
+  const md=document.getElementById('modal');
+  md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet">
     <h3>Revocar acceso</h3>
-    <p>¿Revocar el acceso de <b>${esc(label)}</b>? No podrá entrar a la app. No se puede deshacer.</p>
-    <div class="stack" style="margin-top:14px">
-      <button class="btn dan" id="mRevoke" style="justify-content:center">Revocar acceso</button>
-      <button class="btn sec" id="mClose" style="justify-content:center">Cancelar</button>
+    <p>¿Revocar a <b>${esc(label)}</b>? No podrá entrar a la app. Puedes reactivarlo después.</p>
+    <div class="stack" style="margin-top:12px">
+      <button class="btn dan" id="mOk" style="justify-content:center">Revocar acceso</button>
+      <button class="btn sec" id="mNo" style="justify-content:center">Cancelar</button>
     </div>
   </div></div>`;
-
-  md.querySelector('#mClose').onclick = ()=>md.innerHTML='';
-  md.querySelector('#mbg').onclick = e=>{if(e.target===md.querySelector('#mbg'))md.innerHTML='';};
-
-  document.getElementById('mRevoke').onclick = async () => {
-    const btn = document.getElementById('mRevoke');
-    btn.disabled=true; btn.textContent='Revocando…';
+  const close=()=>md.innerHTML='';
+  md.querySelector('#mNo').onclick=close;
+  md.querySelector('#mbg').onclick=e=>{if(e.target===md.querySelector('#mbg'))close();};
+  document.getElementById('mOk').onclick=async()=>{
+    const btn=document.getElementById('mOk');btn.disabled=true;btn.textContent='Revocando…';
     try{
-      const r = await fetch(WORKER_URL+'/admin/revoke',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminSecret},
+      const r=await fetch(WORKER_URL+'/admin/revoke',{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
         body:JSON.stringify({codeHash})
       });
-      const d = await r.json();
-      if(d.ok){md.innerHTML='';await loadData();}
+      if((await r.json()).ok){close();await loadData();}
       else{btn.disabled=false;btn.textContent='Revocar acceso';}
-    }catch(e){btn.disabled=false;btn.textContent='Revocar acceso';}
+    }catch{btn.disabled=false;btn.textContent='Revocar acceso';}
   };
+}
+
+async function doReactivate(codeHash,label){
+  if(!confirm(`¿Reactivar acceso de ${label}? Se le asignará el mismo código que tenía.`)) return;
+  try{
+    const r=await fetch(WORKER_URL+'/admin/reactivate',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
+      body:JSON.stringify({codeHash})
+    });
+    if((await r.json()).ok) await loadData();
+  }catch{alert('Error de conexión');}
 }
 
 async function loadData(){
   try{
-    const r = await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+adminSecret}});
-    if(r.ok){ data=await r.json(); render(); }
-    else if(r.status===401){ adminSecret=''; sessionStorage.removeItem('_adm'); render(); }
-  }catch(e){ console.error(e); }
+    const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+secret}});
+    if(r.ok){data=await r.json();render();}
+    else if(r.status===401){sessionStorage.removeItem('_adm');secret='';render();}
+  }catch(e){console.error(e);}
 }
 
 render();
