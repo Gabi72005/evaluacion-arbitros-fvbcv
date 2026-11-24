@@ -45,7 +45,7 @@ tr:last-child td{border-bottom:0}
 .ts{font-size:12px;color:var(--mute)}
 .empty{color:var(--mute);font-size:14px;text-align:center;padding:20px}
 .modal-bg{position:fixed;inset:0;background:rgba(10,20,30,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.modal-sheet{background:#fff;width:100%;max-width:500px;border-radius:18px 18px 0 0;padding:20px 18px 28px}
+.modal-sheet{background:#fff;width:100%;max-width:500px;border-radius:18px 18px 0 0;padding:20px 18px calc(28px + env(safe-area-inset-bottom,0px))}
 .modal-sheet h3{margin:0 0 6px;font-size:18px}
 .modal-sheet p{margin:0 0 12px;color:var(--mute);font-size:14px}
 .code-box{background:var(--blue-l);border:2px solid var(--blue);border-radius:12px;padding:16px;text-align:center;margin:12px 0;font-size:30px;font-weight:800;letter-spacing:.18em;color:var(--blue-d);font-family:monospace}
@@ -61,7 +61,49 @@ tr:last-child td{border-bottom:0}
 .brand b{display:block;font-size:16px;color:var(--blue)}.brand span{font-size:12px;color:var(--mute)}
 label.f{display:block;font-size:11px;color:var(--mute);margin:10px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .acts{display:flex;gap:6px;flex-wrap:wrap}
-@media(max-width:580px){.hide{display:none}table{font-size:12px}td,th{padding:7px 6px}}
+@media(max-width:600px){
+  .hide{display:none}
+  .wrap{padding:0 10px}
+  header{padding:10px 12px;gap:8px}
+  header h1{font-size:15px}
+  .iconbtn{height:34px;padding:0 10px;font-size:12px}
+
+  /* Stats */
+  .stats{grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+  .stat{padding:9px 6px}
+  .stat .n{font-size:20px}
+  .stat .l{font-size:10px}
+
+  /* Tabs */
+  .tab{padding:8px 10px;font-size:13px}
+
+  /* Toolbar */
+  .toolbar{flex-direction:column!important;align-items:stretch!important;gap:6px!important}
+  .toolbar .t{max-width:100%!important;width:100%}
+  .toolbar-btns{display:flex;gap:8px}
+  .toolbar-btns .btn{flex:1;justify-content:center;font-size:13px}
+
+  /* Table defaults */
+  table{font-size:13px}
+  td,th{padding:8px 6px}
+  .code{font-size:12px;letter-spacing:0;padding:2px 5px}
+  .acts{flex-direction:column;gap:4px;align-items:stretch}
+  .acts .btn{padding:7px 8px;font-size:11px;justify-content:center}
+  .acts .btn svg{margin:0 auto}
+}
+/* Card layout for arbitros table on narrow screens */
+@media(max-width:500px){
+  .arb-table thead{display:none}
+  .arb-table,.arb-table tbody{display:block}
+  .arb-table tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto auto;padding:12px;border-bottom:1px solid var(--line)}
+  .arb-table tbody td{border:0;padding:2px 0;display:flex;align-items:center}
+  .arb-table tbody td:nth-child(1){grid-column:1;grid-row:1;font-size:14px}
+  .arb-table tbody td:nth-child(2){grid-column:1;grid-row:2}
+  .arb-table tbody td:nth-child(3){grid-column:1;grid-row:3}
+  .arb-table tbody td.hide{display:none!important}
+  .arb-table tbody td:last-child{grid-column:2;grid-row:1/span 3;flex-direction:column;justify-content:center;gap:5px;padding-left:10px;border:0}
+  .arb-table tbody td:last-child .btn{padding:8px 10px;font-size:11px;white-space:nowrap}
+}
 </style>
 </head>
 <body>
@@ -187,13 +229,15 @@ function appHtml(){
 
 function tabArbitros(codes){
   const sorted=[...codes].sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
-  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-    <input class="t" id="arbSearch" placeholder="Buscar árbitro..." oninput="filterRows('arbSearch','arbTbody')" style="flex:1;min-width:160px;max-width:320px;margin:0">
-    <button class="btn sec" id="pdfBtn">Descargar PDF</button>
-    <button class="btn pri" id="addBtn">+ Añadir árbitro</button>
+  return `<div class="toolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+    <input class="t" id="arbSearch" placeholder="Buscar árbitro..." oninput="filterRows('arbSearch','arbTbody')" style="flex:1;min-width:0;max-width:320px;margin:0">
+    <div class="toolbar-btns">
+      <button class="btn sec" id="pdfBtn">Descargar PDF</button>
+      <button class="btn pri" id="addBtn">+ Añadir árbitro</button>
+    </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-  ${sorted.length?`<table>
+  ${sorted.length?`<table class="arb-table">
     <thead><tr>
       <th>Nombre</th><th>Código</th><th>Estado</th>
       <th class="hide">Dispositivo</th><th class="hide">Último acceso</th><th></th>
@@ -218,7 +262,7 @@ function tabArbitros(codes){
 
 function tabActividad(logs){
   return `<div style="margin-bottom:10px">
-    <input class="t" id="actSearch" placeholder="Buscar árbitro..." oninput="filterRows('actSearch','actTbody')" style="max-width:320px;margin:0">
+    <input class="t" id="actSearch" placeholder="Buscar árbitro..." oninput="filterRows('actSearch','actTbody')" style="max-width:400px;margin:0">
   </div>
   <div class="card" style="padding:0;overflow:hidden">
   ${logs.length?`<table>
