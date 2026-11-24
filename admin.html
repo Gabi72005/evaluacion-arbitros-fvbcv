@@ -312,9 +312,8 @@ function bindLogin(){
       const ld=await lr.json();
       if(!lr.ok||!ld.ok){err.textContent='Contraseña incorrecta';btn.disabled=false;btn.textContent='Entrar';return;}
       secret=ld.token;sessionStorage.setItem('_adm',ld.token);
-      const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+secret}});
-      if(r.ok){data=await r.json();render();}
-      else{err.textContent='Error al cargar datos';btn.disabled=false;btn.textContent='Entrar';}
+      try{await loadData();}
+      catch{err.textContent='Error al cargar datos';btn.disabled=false;btn.textContent='Entrar';}
     }catch{err.textContent='Error de conexión';btn.disabled=false;btn.textContent='Entrar';}
   };
 }
