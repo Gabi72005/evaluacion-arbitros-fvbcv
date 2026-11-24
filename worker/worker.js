@@ -1,4 +1,5 @@
 // Env vars needed: EVAL_KV (binding), ADMIN_SECRET, DERIVE_SALT, SESSION_SECRET, ALLOWED_ORIGIN
+// Opcionales (aviso por correo de PDFs subidos): RESEND_API_KEY (secret), NOTIFY_EMAIL, NOTIFY_FROM, ADMIN_URL
 
 // ── Security headers added to every response ────────────────────────────────
 const SEC_HEADERS = {
@@ -111,14 +112,14 @@ async function verifyAdminToken(authHeader, env) {
 const RL_MAX = 5;
 const RL_WINDOW = 900; // seconds (15 min)
 
-async function checkRateLimit(env, key) {
+async function checkRateLimit(env, key, max = RL_MAX) {
   const rlKey = `rl:${key}`;
   const now = Date.now();
   let rl = await env.EVAL_KV.get(rlKey, 'json');
   if (!rl || now - rl.firstAt > RL_WINDOW * 1000) {
     rl = { count: 0, firstAt: now };
   }
-  if (rl.count >= RL_MAX) {
+  if (rl.count >= max) {
     const retryAfter = Math.ceil((rl.firstAt + RL_WINDOW * 1000 - now) / 1000);
     return { blocked: true, retryAfter: Math.max(1, retryAfter) };
   }
@@ -169,7 +170,7 @@ async function pruneLogIfNeeded(env) {
 // ── Main router ───────────────────────────────────────────────────────────────
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: { ...corsHeaders(env), ...SEC_HEADERS } });
     }
@@ -179,6 +180,7 @@ export default {
     if (path === '/auth/verify'    && request.method === 'POST') return handleVerify(request, env);
     if (path === '/log/pdf'        && request.method === 'POST') return handleLogPdf(request, env);
     if (path === '/feedback'       && request.method === 'POST') return handleFeedback(request, env);
+    if (path === '/upload/pdf'     && request.method === 'POST') return handleUploadPdf(request, env, ctx);
     if (path === '/admin/login'    && request.method === 'POST') return handleAdminLogin(request, env);
     if (path === '/admin/logout'   && request.method === 'POST') return handleAdminLogout(request, env);
 
@@ -191,6 +193,10 @@ export default {
       if (path === '/admin/feedback'        && request.method === 'GET')    return handleAdminFeedback(env);
       if (path === '/admin/feedback/delete' && request.method === 'POST')   return handleAdminFeedbackDelete(request, env);
       if (path === '/admin/log/delete'      && request.method === 'POST')   return handleLogDelete(request, env);
+      if (path === '/admin/uploads'         && request.method === 'GET')    return handleAdminUploads(env);
+      if (path === '/admin/uploads/file'    && request.method === 'GET')    return handleAdminUploadFile(request, env);
+      if (path === '/admin/uploads/seen'    && request.method === 'POST')   return handleAdminUploadsSeen(request, env);
+      if (path === '/admin/uploads/delete'  && request.method === 'POST')   return handleAdminUploadsDelete(request, env);
       if (path === '/admin/names'         && request.method === 'POST') return handleAddName(request, env);
       if (path === '/admin/revoke'        && request.method === 'POST') return handleRevoke(request, env);
       if (path === '/admin/reactivate'    && request.method === 'POST') return handleReactivate(request, env);
@@ -637,5 +643,185 @@ async function handleLogDelete(request, env) {
     return noStoreJson({ ok: false, error: 'Clave inválida' }, 400, env);
   }
   await env.EVAL_KV.delete(key);
+  return noStoreJson({ ok: true }, 200, env);
+}
+
+// ── PDFs subidos por los árbitros ─────────────────────────────────────────────
+// KV:  up:<id>   → bytes del PDF (metadata con los datos de la evaluación)
+//      upn:<id>  → '1' mientras la admin no lo ha abierto/descargado (aviso "nuevo")
+// <id> = sha256(label|evId) recortado: si el árbitro reenvía la misma evaluación, se sustituye.
+
+const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;   // 5 MB por PDF (los informes pesan ~100-400 KB)
+const UPLOAD_TTL = 365 * 86400;             // se conservan 1 año, igual que la actividad
+const UPLOAD_RL_MAX = 10;                   // subidas por árbitro cada 15 min
+const UPLOAD_ID_RE = /^[0-9a-f]{24}$/;
+const ROLE_LABELS = { primero: '1º árbitro', segundo: '2º árbitro', anotador: 'Anotador' };
+
+const cut = (v, n) => (typeof v === 'string' ? v.slice(0, n) : null);
+
+async function listAllKeys(env, prefix) {
+  const keys = [];
+  let cursor;
+  do {
+    const r = await env.EVAL_KV.list({ prefix, cursor });
+    keys.push(...r.keys);
+    cursor = r.list_complete ? null : r.cursor;
+  } while (cursor);
+  return keys;
+}
+
+async function handleUploadPdf(request, env, ctx) {
+  const len = Number(request.headers.get('Content-Length') || 0);
+  if (len > UPLOAD_MAX_BYTES + 64 * 1024) return json({ ok: false, error: 'El PDF es demasiado grande (máx. 5 MB)' }, 413, env);
+  if (!(request.headers.get('Content-Type') || '').includes('multipart/form-data')) {
+    return json({ ok: false, error: 'Petición inválida' }, 400, env);
+  }
+
+  let form;
+  try { form = await request.formData(); } catch { return json({ ok: false, error: 'Petición inválida' }, 400, env); }
+  const token = form.get('token');
+  const file = form.get('file');
+  let meta;
+  try { meta = JSON.parse(String(form.get('meta') || '{}')); } catch { meta = null; }
+  if (!token || typeof token !== 'string' || !meta || typeof meta !== 'object') {
+    return json({ ok: false, error: 'Petición inválida' }, 400, env);
+  }
+
+  // Sesión del árbitro (mismas reglas que /log/pdf)
+  const session = await env.EVAL_KV.get(`s:${token}`, 'json');
+  if (!session) return json({ ok: false, error: 'Sesión no válida' }, 401, env);
+  if (!session.masterSession) {
+    const rec = await env.EVAL_KV.get(`c:${session.codeHash}`, 'json');
+    if (!rec || rec.status === 'revoked') return json({ ok: false, error: 'Sesión no válida' }, 401, env);
+  }
+
+  const rl = await checkRateLimit(env, `up:${session.codeHash || session.label}`, UPLOAD_RL_MAX);
+  if (rl.blocked) {
+    return json({ ok: false, error: 'Demasiados envíos. Espera unos minutos.' }, 429, env,
+      { 'Retry-After': String(rl.retryAfter) });
+  }
+
+  // Validación de datos (mismas reglas que /log/pdf)
+  const { evId, aspirant, role, examiner, nEval, fecha, passed, fileName } = meta;
+  if (!validStr(evId, 64, /^[A-Za-z0-9_-]+$/) || !evId) return json({ ok: false, error: 'evId inválido' }, 400, env);
+  if (nEval !== null && nEval !== undefined) {
+    const n = Number(nEval);
+    if (!Number.isInteger(n) || n < 1 || n > 20) return json({ ok: false, error: 'nEval inválido' }, 400, env);
+  }
+  if (role !== null && role !== undefined && !VALID_ROLES.has(role)) return json({ ok: false, error: 'role inválido' }, 400, env);
+  if (!validStr(aspirant, 120)) return json({ ok: false, error: 'aspirant inválido' }, 400, env);
+  if (!validStr(examiner, 120)) return json({ ok: false, error: 'examiner inválido' }, 400, env);
+  if (fecha !== null && fecha !== undefined && !validStr(fecha, 10, /^\d{4}-\d{2}-\d{2}$/)) {
+    return json({ ok: false, error: 'fecha inválida' }, 400, env);
+  }
+  if (!validStr(fileName, 160, /^[A-Za-z0-9_.-]+\.pdf$/)) return json({ ok: false, error: 'Nombre de archivo inválido' }, 400, env);
+
+  // El archivo tiene que ser un PDF de verdad
+  if (!file || typeof file === 'string' || typeof file.arrayBuffer !== 'function') {
+    return json({ ok: false, error: 'Falta el archivo' }, 400, env);
+  }
+  if (file.size > UPLOAD_MAX_BYTES) return json({ ok: false, error: 'El PDF es demasiado grande (máx. 5 MB)' }, 413, env);
+  const bytes = await file.arrayBuffer();
+  const head = new TextDecoder().decode(new Uint8Array(bytes.slice(0, 5)));
+  if (bytes.byteLength < 100 || head !== '%PDF-') return json({ ok: false, error: 'El archivo no es un PDF' }, 400, env);
+
+  const id = (await sha256hex(`${session.label}|${evId}`)).slice(0, 24);
+  const replaced = (await env.EVAL_KV.list({ prefix: `up:${id}`, limit: 1 })).keys.length > 0;
+  const nEvalNorm = (nEval !== null && nEval !== undefined) ? Number(nEval) : null;
+  const metadata = {
+    label: cut(session.label, 80), aspirant: cut(aspirant, 80), examiner: cut(examiner, 80),
+    role: role || null, nEval: nEvalNorm, fecha: fecha || null,
+    passed: passed === true ? true : passed === false ? false : null,
+    name: fileName || `Evaluacion_${id}.pdf`, size: bytes.byteLength, ts: nowIso(),
+  };
+  // KV limita la metadata a 1024 bytes
+  while (new TextEncoder().encode(JSON.stringify(metadata)).length > 1000 && metadata.examiner) metadata.examiner = null;
+
+  await env.EVAL_KV.put(`up:${id}`, bytes, { metadata, expirationTtl: UPLOAD_TTL });
+  await env.EVAL_KV.put(`upn:${id}`, '1', { expirationTtl: UPLOAD_TTL });
+  await env.EVAL_KV.put(`l:${Date.now()}-${randomHex(4)}`, JSON.stringify({
+    type: 'upload', label: session.label, deviceId: session.deviceId,
+    aspirant, role, examiner, nEval: nEvalNorm, fecha, passed: metadata.passed, replaced, timestamp: nowIso(),
+  }), { expirationTtl: 365 * 86400 });
+  pruneLogIfNeeded(env);
+
+  const mail = sendUploadEmail(env, metadata, replaced).catch(() => {});
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(mail); else await mail;
+
+  return json({ ok: true, replaced }, 200, env);
+}
+
+// Aviso por correo con Resend (gratis hasta 3.000/mes). Si faltan las variables, no hace nada.
+async function sendUploadEmail(env, m, replaced) {
+  if (!env.RESEND_API_KEY || !env.NOTIFY_EMAIL) return;
+  const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const oneLine = s => String(s ?? '').replace(/[\r\n]+/g, ' ').trim();
+  const roleTxt = ROLE_LABELS[m.role] || '—';
+  const result = m.passed === true ? 'Supera' : m.passed === false ? 'No supera' : '—';
+  const subject = oneLine(`${replaced ? 'PDF actualizado' : 'Nuevo PDF'}: ${m.aspirant || 'aspirante'} · ${roleTxt}${m.nEval ? ' · ' + m.nEval + 'ª eval.' : ''}`).slice(0, 180);
+  const row = (k, v) => `<tr><td style="padding:4px 12px 4px 0;color:#64748b">${k}</td><td style="padding:4px 0"><b>${h(v)}</b></td></tr>`;
+  const panel = env.ADMIN_URL ? `<p><a href="${h(env.ADMIN_URL)}">Abrir el panel de administración</a></p>` : '';
+  const html = `<div style="font-family:system-ui,Arial,sans-serif;font-size:14px;color:#0f172a">
+    <p>${replaced ? 'Se ha <b>actualizado</b> un PDF de evaluación' : 'Se ha subido un <b>nuevo PDF</b> de evaluación'}:</p>
+    <table style="border-collapse:collapse">${row('Árbitro', m.label)}${row('Aspirante', m.aspirant)}${row('Rol', roleTxt)}${row('Nº evaluación', m.nEval ? m.nEval + 'ª' : '—')}${row('Fecha', m.fecha || '—')}${row('Resultado', result)}</table>
+    ${panel}<p style="color:#64748b;font-size:12px">Lo tienes en la pestaña «PDFs» del panel.</p></div>`;
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: env.NOTIFY_FROM || 'FVBCV Evaluaciones <onboarding@resend.dev>',
+      to: [env.NOTIFY_EMAIL], subject, html,
+    }),
+  });
+}
+
+async function handleAdminUploads(env) {
+  const [files, news] = await Promise.all([listAllKeys(env, 'up:'), listAllKeys(env, 'upn:')]);
+  const isNew = new Set(news.map(k => k.name.slice(4)));
+  const items = files.map(k => {
+    const id = k.name.slice(3);
+    return { id, ...(k.metadata || {}), isNew: isNew.has(id) };
+  }).sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')));
+  return noStoreJson({ ok: true, uploads: items, newCount: items.filter(i => i.isNew).length }, 200, env);
+}
+
+async function handleAdminUploadFile(request, env) {
+  const id = new URL(request.url).searchParams.get('id') || '';
+  if (!UPLOAD_ID_RE.test(id)) return noStoreJson({ ok: false, error: 'id inválido' }, 400, env);
+  const { value, metadata } = await env.EVAL_KV.getWithMetadata(`up:${id}`, 'arrayBuffer');
+  if (!value) return noStoreJson({ ok: false, error: 'No encontrado' }, 404, env);
+  if (await env.EVAL_KV.get(`upn:${id}`)) await env.EVAL_KV.delete(`upn:${id}`); // ya visto
+  const name = String(metadata?.name || `Evaluacion_${id}.pdf`).replace(/[^A-Za-z0-9_.-]/g, '_');
+  return new Response(value, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${name}"`,
+      'Cache-Control': 'no-store',
+      ...corsHeaders(env),
+      ...SEC_HEADERS,
+    },
+  });
+}
+
+async function parseIds(request) {
+  const body = await parseJsonBody(request, 16384);
+  if (!body || !Array.isArray(body.ids) || body.ids.length < 1 || body.ids.length > 300) return null;
+  if (!body.ids.every(i => typeof i === 'string' && UPLOAD_ID_RE.test(i))) return null;
+  return [...new Set(body.ids)];
+}
+
+async function handleAdminUploadsSeen(request, env) {
+  const ids = await parseIds(request);
+  if (!ids) return noStoreJson({ ok: false, error: 'Datos inválidos' }, 400, env);
+  await Promise.all(ids.map(id => env.EVAL_KV.delete(`upn:${id}`)));
+  return noStoreJson({ ok: true }, 200, env);
+}
+
+async function handleAdminUploadsDelete(request, env) {
+  const ids = await parseIds(request);
+  if (!ids) return noStoreJson({ ok: false, error: 'Datos inválidos' }, 400, env);
+  await Promise.all(ids.flatMap(id => [env.EVAL_KV.delete(`up:${id}`), env.EVAL_KV.delete(`upn:${id}`)]));
+  await appendAdminLog(env, request, 'upload_delete', { count: ids.length });
   return noStoreJson({ ok: true }, 200, env);
 }

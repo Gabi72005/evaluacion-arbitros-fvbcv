@@ -192,6 +192,14 @@ label.f{
 
 /* ── Actividad: filtros + paginación ────────────────────── */
 .act-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.up-banner{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 14px;padding:11px 14px;border:1.5px solid #f59e0b;border-radius:10px;background:#fffbeb;color:#92400e;font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.up-banner span{margin-left:auto;font-weight:700;white-space:nowrap}
+.up-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.up-actions .btn{padding:8px 12px;font-size:12px}
+.up-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.up-row:last-child{border-bottom:0}
+.up-row.new{background:#fffbeb}
+.up-row input[type=checkbox]{width:18px;height:18px;flex:none;accent-color:var(--blue)}
 .act-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .chip-group{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
 .fchip{
@@ -272,6 +280,9 @@ let secret = sessionStorage.getItem('_adm') || '';
 let tab = 'arbitros';
 let feedbacks = [];
 let data = null;
+let uploads = [];              // PDFs enviados por los árbitros (metadata, sin bytes)
+let upSel = new Set(), upSearch = '', upFilter = 'all', upBusy = false;
+const UP_POLL_MS = 5 * 60 * 1000; // comprobar PDFs nuevos cada 5 min con el panel visible
 let statusFilter = null; // 'active' | 'pending' | 'revoked' | null
 let actPage=0, actTypeFilter='all', actResultFilter='all', actSearch='';
 const ACT_PAGE_SIZE=15;
@@ -364,6 +375,7 @@ function appHtml(){
   const revoked=codes.filter(c=>c.status==='revoked').length;
   const pdfsHoy=logs.filter(l=>l.type==='pdf'&&(l.timestamp||'').startsWith(new Date().toISOString().slice(0,10))).length;
   const fbCount=feedbacks.length;
+  const upNew=uploads.filter(u=>u.isNew).length;
 
   return `<div class="app">
   <header>
@@ -382,12 +394,14 @@ function appHtml(){
       <button class="stat stat-btn" data-goto-tab="actividad" style="border-top-color:#64748b"><div class="n" style="color:#64748b">${pdfsHoy}</div><div class="l">PDFs hoy</div></button>
       <button class="stat stat-btn" data-goto-tab="feedback" style="border-top-color:var(--blue)"><div class="n" style="color:var(--blue)">${fbCount}</div><div class="l">Feedback</div></button>
     </div>
+    ${upNew&&tab!=='pdfs'?`<button class="up-banner" data-goto-tab="pdfs">🔔 <b>${upNew} PDF${upNew!==1?'s':''} nuevo${upNew!==1?'s':''}</b> enviado${upNew!==1?'s':''} por los árbitros <span>Ver →</span></button>`:''}
     <div class="tabs">
       <button class="tab ${tab==='arbitros'?'on':''}" data-tab="arbitros">Árbitros</button>
+      <button class="tab ${tab==='pdfs'?'on':''}" data-tab="pdfs">PDFs${upNew?` <span style="background:#d97706;color:#fff;border-radius:99px;padding:1px 7px;font-size:11px">${upNew}</span>`:''}</button>
       <button class="tab ${tab==='actividad'?'on':''}" data-tab="actividad">Actividad</button>
       <button class="tab ${tab==='feedback'?'on':''}" data-tab="feedback">Feedback${fbCount?` <span style="background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px">${fbCount}</span>`:''}</button>
     </div>
-    ${tab==='arbitros' ? tabArbitros(codes) : tab==='actividad' ? `<div id="actWrap">${tabActividad(logs)}</div>` : tabFeedback(feedbacks)}
+    ${tab==='arbitros' ? tabArbitros(codes) : tab==='actividad' ? `<div id="actWrap">${tabActividad(logs)}</div>` : tab==='pdfs' ? `<div id="upWrap">${tabPdfs()}</div>` : tabFeedback(feedbacks)}
   </div>
   <div id="modal"></div></div>`;
 }
@@ -442,7 +456,7 @@ function tabActividad(logs){
   const totalPages=Math.max(1,Math.ceil(total/ACT_PAGE_SIZE));
   const page=Math.min(actPage,totalPages-1);
   const slice=filtered.slice(page*ACT_PAGE_SIZE,(page+1)*ACT_PAGE_SIZE);
-  const hasPassed=logs.some(l=>l.type==='pdf'&&l.passed!=null);
+  const hasPassed=logs.some(l=>(l.type==='pdf'||l.type==='upload')&&l.passed!=null);
 
   const chip=(id,label,active,extraCls='')=>
     `<button class="fchip${active?' on'+extraCls:''}" data-actfilter="${id}">${label}</button>`;
@@ -456,6 +470,7 @@ function tabActividad(logs){
       <span class="chip-group">
         ${chip('type:all','Todo',actTypeFilter==='all')}
         ${chip('type:pdf','PDF',actTypeFilter==='pdf')}
+        ${chip('type:upload','Enviados',actTypeFilter==='upload')}
         ${chip('type:login','Login',actTypeFilter==='login')}
       </span>
       ${hasPassed?`<span class="chip-group">
@@ -473,10 +488,10 @@ function tabActividad(logs){
   ${slice.length?`<table>
     <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th><th style="width:36px"></th></tr></thead>
     <tbody>${slice.map(l=>`<tr>
-      <td>${l.type==='pdf'?'<span class="pill ok">PDF</span>':'<span class="pill na">Login</span>'}</td>
-      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">${esc(l.aspirant||'')} · ${fmtRole(l.role)}${l.nEval?' · Eval. '+esc(String(l.nEval))+'ª':''}${l.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px 2px 5px">Supera</span>':l.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px 2px 5px">No supera</span>':''}</div>`:''}
+      <td>${l.type==='pdf'?'<span class="pill ok">PDF</span>':l.type==='upload'?'<span class="pill" style="background:#fef3c7;color:#92400e">Enviado</span>':'<span class="pill na">Login</span>'}</td>
+      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'||l.type==='upload'?`<div class="ts" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">${esc(l.aspirant||'')} · ${fmtRole(l.role)}${l.nEval?' · Eval. '+esc(String(l.nEval))+'ª':''}${l.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px 2px 5px">Supera</span>':l.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px 2px 5px">No supera</span>':''}</div>`:''}
           ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
-      <td class="hide">${l.type==='pdf'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
+      <td class="hide">${l.type==='pdf'||l.type==='upload'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
           ${l.type==='login'?`<div class="ts">${[l.city,l.country].filter(Boolean).join(', ')||'—'}${l.deviceInfo?` · ${esc(l.deviceInfo.tz||'')}`:''}</div>`:''}</td>
       <td><span class="ts">${fmtDate(l.timestamp)}</span></td>
       <td style="text-align:center">${l._key?`<button onclick="logDelete('${esc(l._key)}')" class="iconbtn" title="Eliminar registro" style="color:var(--ko);opacity:.7;font-size:15px;padding:4px 6px">🗑</button>`:''}</td>
@@ -642,6 +657,7 @@ function bindApp(){
     if(c) showMsgModal(c);
   });
   if(tab==='actividad') bindActTab();
+  if(tab==='pdfs') bindPdfsTab();
 }
 
 /* ---- MODALES ---- */
@@ -821,9 +837,10 @@ async function loadData(){
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),8000);
     const headers={'Authorization':'Bearer '+secret};
-    const [r,rf]=await Promise.all([
+    const [r,rf,ru]=await Promise.all([
       fetch(WORKER_URL+'/admin/data',    {headers,signal:ctrl.signal}),
       fetch(WORKER_URL+'/admin/feedback',{headers,signal:ctrl.signal}),
+      fetch(WORKER_URL+'/admin/uploads', {headers,signal:ctrl.signal}).catch(()=>null),
     ]);
     clearTimeout(tid);
     if(r.status===401||r.status===403){
@@ -831,12 +848,175 @@ async function loadData(){
     }
     if(r.ok){data=await r.json();saveCache(data);}
     if(rf.ok){const fd=await rf.json();feedbacks=fd.feedbacks||[];}
+    if(ru&&ru.ok){const ud=await ru.json();setUploads(ud.uploads||[]);}
     render();
   }catch(e){
     if(e&&e.name==='AbortError'&&data){render();}
     else console.error(e);
   }
 }
+
+/* ---- PDFs ENVIADOS POR LOS ÁRBITROS ---- */
+function setUploads(list){
+  uploads=list;
+  const ids=new Set(list.map(u=>u.id));
+  upSel=new Set([...upSel].filter(id=>ids.has(id)));
+  const n=list.filter(u=>u.isNew).length;
+  document.title=(n?`(${n}) `:'')+'Panel Admin · Evaluación Árbitros FVBCV';
+}
+function upVisible(){
+  return uploads.filter(u=>{
+    if(upFilter==='new'&&!u.isNew) return false;
+    if(!upSearch) return true;
+    return [u.label,u.aspirant,u.examiner].some(v=>String(v||'').toLowerCase().includes(upSearch));
+  });
+}
+function fmtSize(b){return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round((b||0)/1024))+' KB';}
+function tabPdfs(){
+  const vis=upVisible(), nNew=uploads.filter(u=>u.isNew).length;
+  const allOn=vis.length>0&&vis.every(u=>upSel.has(u.id));
+  const nSel=upSel.size;
+  const chip=(id,label,active)=>`<button class="fchip${active?' on':''}" data-upfilter="${id}">${label}</button>`;
+  return `
+  <div class="act-toolbar">
+    <input class="t" id="upSearch" placeholder="Buscar árbitro o aspirante..." value="${esc(upSearch)}" style="flex:1;min-width:140px;max-width:280px;margin:0">
+    <div class="act-chips"><span class="chip-group">
+      ${chip('all','Todos ('+uploads.length+')',upFilter==='all')}
+      ${chip('new','Nuevos ('+nNew+')',upFilter==='new')}
+    </span></div>
+  </div>
+  <div class="up-actions">
+    <button class="btn pri" id="upZip"${nSel&&!upBusy?'':' disabled'}>⬇ Descargar ZIP${nSel?' ('+nSel+')':''}</button>
+    <button class="btn sec" id="upSeen"${nSel&&!upBusy?'':' disabled'}>Marcar como vistos</button>
+    <button class="btn sec" id="upDel"${nSel&&!upBusy?'':' disabled'} style="color:var(--ko)">Eliminar</button>
+    ${nSel?`<button class="btn sec" id="upNone">Quitar selección</button>`:''}
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+  ${vis.length?`<label class="up-row" style="background:#f8fafc;cursor:pointer;font-size:12px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em">
+      <input type="checkbox" id="upAll"${allOn?' checked':''}> Seleccionar ${upSearch||upFilter!=='all'?'los mostrados':'todos'} (${vis.length})</label>
+    ${vis.map(u=>`<div class="up-row${u.isNew?' new':''}">
+      <input type="checkbox" data-upsel="${esc(u.id)}"${upSel.has(u.id)?' checked':''} aria-label="Seleccionar">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <b>${esc(u.aspirant||'Aspirante sin nombre')}</b>
+          ${u.isNew?'<span class="pill" style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 6px">Nuevo</span>':''}
+          ${u.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px">Supera</span>':u.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px">No supera</span>':''}
+        </div>
+        <div class="ts" style="margin-top:2px">${fmtRole(u.role)}${u.nEval?' · '+esc(String(u.nEval))+'ª eval.':''}${u.fecha?' · Partido '+esc(u.fecha.split('-').reverse().join('/')):''}</div>
+        <div class="ts">Enviado por <b>${esc(u.label||'—')}</b> · ${fmtDate(u.ts)} · ${fmtSize(u.size)}</div>
+      </div>
+      <button class="btn sec" data-updl="${esc(u.id)}" style="flex:none;padding:7px 10px;font-size:12px" title="Descargar este PDF">⬇ PDF</button>
+    </div>`).join('')}`
+  :`<div class="empty">${uploads.length?'Sin resultados para este filtro.':'Todavía no hay PDFs enviados.<br>Cuando un árbitro pulse «Enviar PDF a la FVBCV» aparecerá aquí.'}</div>`}
+  </div>
+  <div class="ts" style="margin-top:8px;text-align:center">Los PDFs se guardan 1 año. Si un árbitro reenvía la misma evaluación, se sustituye la anterior.</div>`;
+}
+function renderPdfsTab(){
+  const w=document.getElementById('upWrap');
+  if(!w){render();return;}
+  w.innerHTML=tabPdfs(); bindPdfsTab();
+}
+function bindPdfsTab(){
+  const inp=document.getElementById('upSearch');
+  if(inp) inp.oninput=()=>{upSearch=inp.value.toLowerCase().trim();renderPdfsTab();const i2=document.getElementById('upSearch');if(i2){i2.focus();i2.setSelectionRange(i2.value.length,i2.value.length);}};
+  document.querySelectorAll('[data-upfilter]').forEach(b=>b.onclick=()=>{upFilter=b.dataset.upfilter;renderPdfsTab();});
+  document.querySelectorAll('[data-upsel]').forEach(c=>c.onchange=()=>{c.checked?upSel.add(c.dataset.upsel):upSel.delete(c.dataset.upsel);renderPdfsTab();});
+  const all=document.getElementById('upAll');
+  if(all) all.onchange=()=>{upVisible().forEach(u=>all.checked?upSel.add(u.id):upSel.delete(u.id));renderPdfsTab();};
+  document.querySelectorAll('[data-updl]').forEach(b=>b.onclick=()=>downloadOne(b.dataset.updl,b));
+  const z=document.getElementById('upZip'); if(z) z.onclick=downloadZip;
+  const sn=document.getElementById('upSeen'); if(sn) sn.onclick=markSeen;
+  const dl=document.getElementById('upDel'); if(dl) dl.onclick=deleteUploads;
+  const nn=document.getElementById('upNone'); if(nn) nn.onclick=()=>{upSel.clear();renderPdfsTab();};
+}
+async function fetchUploadBlob(id){
+  const r=await fetch(WORKER_URL+'/admin/uploads/file?id='+encodeURIComponent(id),{headers:{'Authorization':'Bearer '+secret}});
+  if(r.status===401){sessionStorage.removeItem('_adm');secret='';render();throw new Error('Sesión caducada');}
+  if(!r.ok) throw new Error('Error '+r.status);
+  const u=uploads.find(x=>x.id===id); if(u) u.isNew=false;
+  return r.blob();
+}
+function saveBlob(blob,name){
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+async function downloadOne(id,btn){
+  const u=uploads.find(x=>x.id===id); if(!u) return;
+  if(btn){btn.disabled=true;btn.textContent='…';}
+  try{saveBlob(await fetchUploadBlob(id),u.name||'Evaluacion.pdf');}
+  catch(e){alert('No se pudo descargar el PDF: '+e.message);}
+  setUploads(uploads); render();
+}
+async function downloadZip(){
+  const sel=uploads.filter(u=>upSel.has(u.id)); if(!sel.length||upBusy) return;
+  upBusy=true;
+  const btn=document.getElementById('upZip');
+  const setTxt=t=>{const b=document.getElementById('upZip');if(b){b.disabled=true;b.textContent=t;}};
+  setTxt('Preparando…');
+  try{
+    if(!window.JSZip) await loadScript('vendor/jszip.min.js'); // JSZip 3.10.1 alojado en la propia web
+    const zip=new JSZip(), used=new Set(), failed=[];
+    let done=0;
+    for(let i=0;i<sel.length;i+=4){ // de 4 en 4 para no saturar
+      await Promise.all(sel.slice(i,i+4).map(async u=>{
+        try{
+          const blob=await fetchUploadBlob(u.id);
+          let name=(u.name||'Evaluacion.pdf').replace(/[^A-Za-z0-9_.-]/g,'_'), n=2;
+          while(used.has(name)) name=(u.name||'Evaluacion.pdf').replace(/\.pdf$/i,'')+'_'+(n++)+'.pdf';
+          used.add(name); zip.file(name,blob);
+        }catch(e){failed.push(u.aspirant||u.name);}
+        setTxt(`Descargando ${++done}/${sel.length}…`);
+      }));
+    }
+    if(!used.size) throw new Error('no se pudo descargar ninguno');
+    setTxt('Comprimiendo…');
+    const out=await zip.generateAsync({type:'blob'});
+    saveBlob(out,`Evaluaciones_FVBCV_${new Date().toISOString().slice(0,10)}.zip`);
+    if(failed.length) alert('ZIP descargado, pero faltan '+failed.length+' PDF(s): '+failed.join(', '));
+    upSel.clear();
+  }catch(e){alert('No se pudo crear el ZIP: '+e.message);}
+  upBusy=false; setUploads(uploads); render();
+}
+async function postUploads(path,ids){
+  const r=await fetch(WORKER_URL+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},body:JSON.stringify({ids})});
+  if(!r.ok) throw new Error('Error '+r.status);
+}
+async function markSeen(){
+  const ids=[...upSel]; if(!ids.length) return;
+  try{await postUploads('/admin/uploads/seen',ids);uploads.forEach(u=>{if(upSel.has(u.id))u.isNew=false;});upSel.clear();}
+  catch(e){alert('No se pudo marcar como vistos: '+e.message);}
+  setUploads(uploads); render();
+}
+function deleteUploads(){
+  const ids=[...upSel]; if(!ids.length) return;
+  showConfirmModal({
+    title:`¿Eliminar ${ids.length} PDF${ids.length!==1?'s':''}?`,
+    sub:'Se borran del archivo de la web. No se puede deshacer. Descárgalos antes si los necesitas.',
+    okLabel:'Eliminar',okClass:'dan',loadingLabel:'Eliminando…',
+    onOk:async()=>{
+      await postUploads('/admin/uploads/delete',ids);
+      setUploads(uploads.filter(u=>!ids.includes(u.id))); upSel.clear(); render();
+    }
+  });
+}
+async function pollUploads(){
+  if(!secret||document.visibilityState!=='visible'||upBusy) return;
+  try{
+    const r=await fetch(WORKER_URL+'/admin/uploads',{headers:{'Authorization':'Bearer '+secret}});
+    if(!r.ok) return;
+    const before=uploads.filter(u=>u.isNew).length;
+    setUploads((await r.json()).uploads||[]);
+    const after=uploads.filter(u=>u.isNew).length;
+    if(after!==before){
+      // no repintar mientras escribe en un buscador o hay un modal abierto
+      const typing=document.activeElement&&document.activeElement.tagName==='INPUT';
+      const modalOpen=document.getElementById('modal')?.innerHTML.trim();
+      if(!typing&&!modalOpen) render();
+    }
+  }catch{}
+}
+setInterval(pollUploads,UP_POLL_MS);
 
 function loadScript(src,integrity){
   return new Promise((res,rej)=>{

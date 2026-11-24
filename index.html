@@ -493,6 +493,7 @@ function viewFinal(ev,r,g){
     ${lastPdf&&lastPdf.id===ev.id&&!dlNs?(canShareFile(lastPdf.file)
       ?'<button class="btn sec" id="sharePdf">↗ Compartir PDF (WhatsApp, correo…)</button>'
       :'<div class="hint" style="text-align:center">PDF descargado. Para enviarlo, ábrelo desde Descargas y compártelo.</div>'):''}
+    ${ev.status==='done'&&localStorage.getItem('_session')?uploadBtnHtml(ev):''}
     ${ev.status==='done'?'<button class="btn ghost" id="reopen">Volver a editar como borrador</button>':''}
   </div>`;
 }
@@ -554,6 +555,7 @@ function bindEval(ev,r){
   const gen=document.getElementById('genPdf');
   if(gen) gen.onclick=async()=>{ev.status='done';save();await exportPdf(ev,true);};
   const sh=document.getElementById('sharePdf'); if(sh) sh.onclick=sharePdf;
+  const up=document.getElementById('uploadPdf'); if(up) up.onclick=()=>uploadPdf(ev,up);
   const re=document.getElementById('reopen'); if(re) re.onclick=()=>{ev.status='draft';save();render();};
 }
 
@@ -815,6 +817,39 @@ async function exportPdf(ev,fromFinal){
   if(ok){lastPdf={id:ev.id,file,name};logPdfExport(ev);}
   if(fromFinal||(S.view==='eval'&&S.cur&&S.cur.id===ev.id)) render();
   else if(ok&&canShareFile(file)&&!dlNs) shareSheet();
+}
+/* Envío del PDF a la FVBCV: queda archivado en el panel de la admin */
+const fmtStamp=t=>{const d=new Date(t);return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});};
+function uploadBtnHtml(ev){
+  const sent=!!ev.uploadedAt, changed=sent&&ev.updated>ev.uploadedAt+2000;
+  const label=!sent?'📤 Enviar PDF a la FVBCV':changed?'📤 Reenviar PDF (hay cambios)':'📤 Volver a enviar PDF';
+  const hint=sent?`<div class="hint" style="text-align:center">${changed?'Enviado el '+fmtStamp(ev.uploadedAt)+', pero lo has modificado después.':'✓ Enviado a la FVBCV el '+fmtStamp(ev.uploadedAt)+'.'}</div>`:'<div class="hint" style="text-align:center">La federación recibirá una copia del PDF.</div>';
+  return `<button class="btn sec" id="uploadPdf">${label}</button>${hint}`;
+}
+async function uploadPdf(ev,btn){
+  const token=localStorage.getItem('_session'); if(!token){toast('Sesión no válida','Vuelve a entrar con tu código');return;}
+  if(!ev.role){toast('Falta elegir el rol');return;}
+  const prev=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='Enviando…';}
+  try{
+    const bytes=await buildPdf(ev), name=fileName(ev), g=globalStats(ev);
+    const fd=new FormData();
+    fd.append('token',token);
+    fd.append('meta',JSON.stringify({evId:String(ev.id),aspirant:ev.aspirant||null,role:ev.role,examiner:ev.examiner||null,nEval:ev.nEval||null,fecha:ev.fecha||null,passed:g?g.pass:null,fileName:name}));
+    fd.append('file',new Blob([bytes],{type:'application/pdf'}),name);
+    const ctrl=new AbortController(), tid=setTimeout(()=>ctrl.abort(),30000);
+    const r=await fetch(WORKER_URL+'/upload/pdf',{method:'POST',body:fd,signal:ctrl.signal});
+    clearTimeout(tid);
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok) throw new Error(d.error||('Error '+r.status));
+    ev.uploadedAt=Date.now(); persist();
+    toast(d.replaced?'PDF actualizado en la FVBCV ✓':'PDF enviado a la FVBCV ✓',name);
+  }catch(e){
+    console.error(e);
+    toast('No se pudo enviar el PDF',e&&e.name==='AbortError'?'Sin conexión o la red va lenta. Inténtalo de nuevo.':(e&&e.message)||'Inténtalo de nuevo');
+  }finally{
+    if(S.view==='eval'&&S.cur&&S.cur.id===ev.id) render();
+    else if(btn){btn.disabled=false;btn.textContent=prev;}
+  }
 }
 async function sharePdf(){
   if(!lastPdf)return;
