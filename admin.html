@@ -190,6 +190,29 @@ label.f{
 .acts{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
 .toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 
+/* ── Actividad: filtros + paginación ────────────────────── */
+.act-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.act-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip-group{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.fchip{
+  border:0;border-right:1px solid var(--line);background:#fff;
+  padding:6px 12px;font-size:12px;font-weight:600;color:var(--mute);
+  cursor:pointer;transition:background .12s,color .12s;white-space:nowrap
+}
+.fchip:last-child{border-right:0}
+.fchip:hover:not(.on){background:#f8fafc;color:var(--ink2)}
+.fchip.on{background:var(--blue);color:#fff}
+.fchip.on-ok{background:var(--ok);color:#fff}
+.fchip.on-ko{background:var(--ko);color:#fff}
+.act-meta{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;color:var(--mute);margin-bottom:8px;min-height:18px
+}
+.act-pager{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  margin-top:12px;padding:4px 0
+}
+
 /* ── Responsive breakpoint 600px ───────────────────────── */
 @media(max-width:600px){
   .hide{display:none}
@@ -250,6 +273,8 @@ let tab = 'arbitros';
 let feedbacks = [];
 let data = null;
 let statusFilter = null; // 'active' | 'pending' | 'revoked' | null
+let actPage=0, actTypeFilter='all', actResultFilter='all', actSearch='';
+const ACT_PAGE_SIZE=15;
 try { const c = sessionStorage.getItem('_adm_cache'); if(c) data = JSON.parse(c); } catch{}
 
 // L2: strip code field from cache to avoid storing full code list in sessionStorage
@@ -362,7 +387,7 @@ function appHtml(){
       <button class="tab ${tab==='actividad'?'on':''}" data-tab="actividad">Actividad</button>
       <button class="tab ${tab==='feedback'?'on':''}" data-tab="feedback">Feedback${fbCount?` <span style="background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px">${fbCount}</span>`:''}</button>
     </div>
-    ${tab==='arbitros' ? tabArbitros(codes) : tab==='actividad' ? tabActividad(logs) : tabFeedback(feedbacks)}
+    ${tab==='arbitros' ? tabArbitros(codes) : tab==='actividad' ? `<div id="actWrap">${tabActividad(logs)}</div>` : tabFeedback(feedbacks)}
   </div>
   <div id="modal"></div></div>`;
 }
@@ -404,13 +429,50 @@ function tabArbitros(codes){
 }
 
 function tabActividad(logs){
-  return `<div style="margin-bottom:10px">
-    <input class="t" id="actSearch" placeholder="Buscar árbitro..." oninput="filterRows('actSearch','actTbody')" style="max-width:400px;margin:0">
+  const sorted=[...logs].sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));
+
+  // Filtros
+  let filtered=sorted;
+  if(actSearch) filtered=filtered.filter(l=>(l.label||'').toLowerCase().includes(actSearch));
+  if(actTypeFilter!=='all') filtered=filtered.filter(l=>l.type===actTypeFilter);
+  if(actResultFilter==='supera') filtered=filtered.filter(l=>l.passed===true);
+  else if(actResultFilter==='nosupera') filtered=filtered.filter(l=>l.passed===false);
+
+  const total=filtered.length;
+  const totalPages=Math.max(1,Math.ceil(total/ACT_PAGE_SIZE));
+  const page=Math.min(actPage,totalPages-1);
+  const slice=filtered.slice(page*ACT_PAGE_SIZE,(page+1)*ACT_PAGE_SIZE);
+  const hasPassed=logs.some(l=>l.type==='pdf'&&l.passed!=null);
+
+  const chip=(id,label,active,extraCls='')=>
+    `<button class="fchip${active?' on'+extraCls:''}" data-actfilter="${id}">${label}</button>`;
+
+  const isFiltered=actSearch||actTypeFilter!=='all'||actResultFilter!=='all';
+
+  return `
+  <div class="act-toolbar">
+    <input class="t" id="actSearch" placeholder="Buscar árbitro..." value="${esc(actSearch)}" style="flex:1;min-width:140px;max-width:280px;margin:0">
+    <div class="act-chips">
+      <span class="chip-group">
+        ${chip('type:all','Todo',actTypeFilter==='all')}
+        ${chip('type:pdf','PDF',actTypeFilter==='pdf')}
+        ${chip('type:login','Login',actTypeFilter==='login')}
+      </span>
+      ${hasPassed?`<span class="chip-group">
+        ${chip('res:all','Todos',actResultFilter==='all')}
+        ${chip('res:supera','Supera',actResultFilter==='supera',' on-ok')}
+        ${chip('res:nosupera','No supera',actResultFilter==='nosupera',' on-ko')}
+      </span>`:''}
+    </div>
+  </div>
+  <div class="act-meta">
+    <span>${total} resultado${total!==1?'s':''}${isFiltered?' <a href="#" id="actClear" style="color:var(--blue);margin-left:6px">Quitar filtros</a>':''}</span>
+    ${totalPages>1?`<span>Página ${page+1} de ${totalPages}</span>`:''}
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-  ${logs.length?`<table>
+  ${slice.length?`<table>
     <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th></tr></thead>
-    <tbody id="actTbody">${logs.map(l=>`<tr>
+    <tbody>${slice.map(l=>`<tr>
       <td>${l.type==='pdf'?'<span class="pill ok">PDF</span>':'<span class="pill na">Login</span>'}</td>
       <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">${esc(l.aspirant||'')} · ${fmtRole(l.role)}${l.nEval?' · Eval. '+esc(String(l.nEval))+'ª':''}${l.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px 2px 5px">Supera</span>':l.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px 2px 5px">No supera</span>':''}</div>`:''}
           ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
@@ -418,8 +480,34 @@ function tabActividad(logs){
           ${l.type==='login'?`<div class="ts">${[l.city,l.country].filter(Boolean).join(', ')||'—'}${l.deviceInfo?` · ${esc(l.deviceInfo.tz||'')}`:''}</div>`:''}</td>
       <td><span class="ts">${fmtDate(l.timestamp)}</span></td>
     </tr>`).join('')}</tbody>
-  </table>` : '<div class="empty">Sin actividad todavía.</div>'}
-  </div>`;
+  </table>`:`<div class="empty">${isFiltered?'Sin resultados para este filtro.':'Sin actividad todavía.'}</div>`}
+  </div>
+  ${totalPages>1?`<div class="act-pager">
+    <button class="btn sec act-prev"${page===0?' disabled':''} style="padding:7px 14px">← Anterior</button>
+    <span class="ts">${page+1} / ${totalPages}</span>
+    <button class="btn sec act-next"${page>=totalPages-1?' disabled':''} style="padding:7px 14px">Siguiente →</button>
+  </div>`:''}`;
+}
+
+function renderActTab(){
+  const wrap=document.getElementById('actWrap');
+  if(!wrap||!data) return;
+  wrap.innerHTML=tabActividad(data.logs||[]);
+  bindActTab();
+}
+
+function bindActTab(){
+  const inp=document.getElementById('actSearch');
+  if(inp) inp.oninput=()=>{actSearch=inp.value.toLowerCase().trim();actPage=0;renderActTab();};
+  document.getElementById('actClear')?.addEventListener('click',e=>{e.preventDefault();actSearch='';actTypeFilter='all';actResultFilter='all';actPage=0;renderActTab();});
+  document.querySelectorAll('[data-actfilter]').forEach(b=>b.onclick=()=>{
+    const f=b.dataset.actfilter;
+    if(f.startsWith('type:')) actTypeFilter=f.slice(5);
+    else if(f.startsWith('res:')) actResultFilter=f.slice(4);
+    actPage=0;renderActTab();
+  });
+  document.querySelector('.act-prev')?.addEventListener('click',()=>{actPage--;renderActTab();});
+  document.querySelector('.act-next')?.addEventListener('click',()=>{actPage++;renderActTab();});
 }
 
 function tabFeedback(items){
@@ -518,7 +606,12 @@ function bindApp(){
     try{await fetch(WORKER_URL+'/admin/logout',{method:'POST',headers:{'Authorization':'Bearer '+secret}});}catch{}
     sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();
   };
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;if(tab==='arbitros')statusFilter=null;render();});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+    tab=b.dataset.tab;
+    if(tab==='arbitros') statusFilter=null;
+    if(tab==='actividad'){actPage=0;actSearch='';actTypeFilter='all';actResultFilter='all';}
+    render();
+  });
   // A2: stat-btn filters
   document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{
     const f=b.dataset.filter;statusFilter=statusFilter===f?null:f;tab='arbitros';render();
@@ -534,6 +627,7 @@ function bindApp(){
     const c=(data.codes||[]).find(x=>x.codeHash===b.dataset.msg);
     if(c) showMsgModal(c);
   });
+  if(tab==='actividad') bindActTab();
 }
 
 /* ---- MODALES ---- */
