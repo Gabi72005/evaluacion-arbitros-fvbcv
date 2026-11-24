@@ -189,6 +189,7 @@ export default {
       }
       if (path === '/admin/data'          && request.method === 'GET')  return handleAdminData(env);
       if (path === '/admin/feedback'      && request.method === 'GET')  return handleAdminFeedback(env);
+      if (path === '/admin/feedback/read' && request.method === 'POST') return handleAdminFeedbackRead(request, env);
       if (path === '/admin/names'         && request.method === 'POST') return handleAddName(request, env);
       if (path === '/admin/revoke'        && request.method === 'POST') return handleRevoke(request, env);
       if (path === '/admin/reactivate'    && request.method === 'POST') return handleReactivate(request, env);
@@ -599,6 +600,23 @@ async function handleFeedback(request, env) {
 async function handleAdminFeedback(env) {
   const list = await env.EVAL_KV.list({ prefix: 'fb:' });
   const sorted = [...list.keys].sort((a, b) => b.name.localeCompare(a.name));
-  const items = await Promise.all(sorted.map(k => env.EVAL_KV.get(k.name, 'json')));
+  const items = await Promise.all(sorted.map(async k => {
+    const item = await env.EVAL_KV.get(k.name, 'json');
+    return item ? { ...item, _key: k.name } : null;
+  }));
   return noStoreJson({ ok: true, feedbacks: items.filter(Boolean) }, 200, env);
+}
+
+async function handleAdminFeedbackRead(request, env) {
+  const body = await parseJsonBody(request);
+  if (!body) return noStoreJson({ ok: false }, 400, env);
+  const { key, read } = body;
+  if (!key || typeof key !== 'string' || !key.startsWith('fb:')) {
+    return noStoreJson({ ok: false, error: 'Clave inválida' }, 400, env);
+  }
+  const item = await env.EVAL_KV.get(key, 'json');
+  if (!item) return noStoreJson({ ok: false, error: 'No encontrado' }, 404, env);
+  item.read = read !== false;
+  await env.EVAL_KV.put(key, JSON.stringify(item), { expirationTtl: 365 * 86400 });
+  return noStoreJson({ ok: true }, 200, env);
 }

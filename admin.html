@@ -155,7 +155,7 @@ function appHtml(){
   const pending=codes.filter(c=>c.status==='pending').length;
   const revoked=codes.filter(c=>c.status==='revoked').length;
   const pdfsHoy=logs.filter(l=>l.type==='pdf'&&(l.timestamp||'').startsWith(new Date().toISOString().slice(0,10))).length;
-  const fbCount=feedbacks.length;
+  const fbUnread=feedbacks.filter(f=>!f.read).length;
 
   return `<div class="app">
   <header>
@@ -171,12 +171,12 @@ function appHtml(){
       <div class="stat"><div class="n" style="color:var(--orange)">${pending}</div><div class="l">Sin activar</div></div>
       <div class="stat"><div class="n" style="color:var(--ko)">${revoked}</div><div class="l">Revocados</div></div>
       <div class="stat"><div class="n">${pdfsHoy}</div><div class="l">PDFs hoy</div></div>
-      <div class="stat"><div class="n" style="color:var(--blue)">${fbCount}</div><div class="l">Feedback</div></div>
+      <div class="stat"><div class="n" style="color:var(--blue)">${feedbacks.length}</div><div class="l">Feedback</div></div>
     </div>
     <div class="tabs">
       <button class="tab ${tab==='arbitros'?'on':''}" data-tab="arbitros">Árbitros</button>
       <button class="tab ${tab==='actividad'?'on':''}" data-tab="actividad">Actividad</button>
-      <button class="tab ${tab==='feedback'?'on':''}" data-tab="feedback">Feedback${fbCount?` <span style="background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px">${fbCount}</span>`:''}</button>
+      <button class="tab ${tab==='feedback'?'on':''}" data-tab="feedback">Feedback${fbUnread?` <span style="background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px">${fbUnread}</span>`:''}</button>
     </div>
     ${tab==='arbitros' ? tabArbitros(codes) : tab==='actividad' ? tabActividad(logs) : tabFeedback(feedbacks)}
   </div>
@@ -235,16 +235,27 @@ function tabActividad(logs){
 function tabFeedback(items){
   if(!items.length) return `<div class="card"><div class="empty">Sin mensajes todavía.</div></div>`;
   return `<div class="card" style="padding:0;overflow:hidden">
-  <table>
-    <thead><tr><th>Tipo</th><th>Mensaje</th><th>País</th><th>Fecha</th></tr></thead>
-    <tbody>${items.map(f=>`<tr>
-      <td>${f.type==='queja'?'<span class="pill ko">⚠ Queja</span>':'<span class="pill ok">💡 Sugerencia</span>'}</td>
-      <td style="max-width:320px;white-space:pre-wrap;word-break:break-word">${esc(f.message||'')}</td>
-      <td><span class="ts">${esc(f.country||'—')}</span></td>
-      <td><span class="ts">${fmtDate(f.timestamp)}</span></td>
-    </tr>`).join('')}
-    </tbody>
-  </table>
+  ${items.map(f=>{
+    const unread=!f.read;
+    const key=esc(f._key||'');
+    const typeLabel=f.type==='queja'?'⚠ Queja':'💡 Sugerencia';
+    const typePill=f.type==='queja'?'<span class="pill ko">⚠ Queja</span>':'<span class="pill ok">💡 Sugerencia</span>';
+    return `<div data-fbkey="${key}" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;background:${unread?'var(--bg2, #f7f8fc)':'#fff'};transition:background .15s" onclick="fbMarkRead('${key}',true,this)">
+      <div style="flex:none;margin-top:3px">
+        <div title="${unread?'No leído':'Leído'}" style="width:10px;height:10px;border-radius:50%;background:${unread?'var(--blue)':'transparent'};border:2px solid ${unread?'var(--blue)':'#bbb'};transition:all .2s"></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          ${typePill}
+          <span class="ts">${esc(f.country||'—')} · ${fmtDate(f.timestamp)}</span>
+          <span style="margin-left:auto;flex:none">
+            <button onclick="event.stopPropagation();fbMarkRead('${key}',${unread?'false':'true'},this.closest('[data-fbkey]'))" class="btn sec" style="font-size:11px;padding:3px 8px">${unread?'Marcar leído':'Marcar no leído'}</button>
+          </span>
+        </div>
+        <div style="font-weight:${unread?'600':'400'};font-size:14px;white-space:pre-wrap;word-break:break-word;color:${unread?'var(--text)':'var(--dim)'}">${esc(f.message||'')}</div>
+      </div>
+    </div>`;
+  }).join('')}
   </div>`;
 }
 
@@ -253,6 +264,19 @@ function statusPill(s){
   if(s==='pending') return '<span class="pill na">⏳ Sin activar</span>';
   if(s==='revoked') return '<span class="pill ko">✗ Revocado</span>';
   return `<span class="pill na">${esc(s)}</span>`;
+}
+
+async function fbMarkRead(key, read, el){
+  try{
+    await fetch(WORKER_URL+'/admin/feedback/read',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
+      body:JSON.stringify({key,read})
+    });
+    // update local state and re-render
+    feedbacks=feedbacks.map(f=>f._key===key?{...f,read}:f);
+    render();
+  }catch{}
 }
 
 function filterRows(inputId, tbodyId){
