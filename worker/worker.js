@@ -175,11 +175,12 @@ export default {
     }
     const path = new URL(request.url).pathname;
 
-    if (path === '/auth/validate' && request.method === 'POST') return handleValidate(request, env);
-    if (path === '/auth/verify'   && request.method === 'POST') return handleVerify(request, env);
-    if (path === '/log/pdf'       && request.method === 'POST') return handleLogPdf(request, env);
-    if (path === '/admin/login'   && request.method === 'POST') return handleAdminLogin(request, env);
-    if (path === '/admin/logout'  && request.method === 'POST') return handleAdminLogout(request, env);
+    if (path === '/auth/validate'  && request.method === 'POST') return handleValidate(request, env);
+    if (path === '/auth/verify'    && request.method === 'POST') return handleVerify(request, env);
+    if (path === '/log/pdf'        && request.method === 'POST') return handleLogPdf(request, env);
+    if (path === '/feedback'       && request.method === 'POST') return handleFeedback(request, env);
+    if (path === '/admin/login'    && request.method === 'POST') return handleAdminLogin(request, env);
+    if (path === '/admin/logout'   && request.method === 'POST') return handleAdminLogout(request, env);
 
     if (path.startsWith('/admin/')) {
       if (!env.SESSION_SECRET) return noStoreJson({ error: 'Configuración incompleta' }, 503, env);
@@ -187,6 +188,7 @@ export default {
         return noStoreJson({ error: 'No autorizado' }, 401, env);
       }
       if (path === '/admin/data'          && request.method === 'GET')  return handleAdminData(env);
+      if (path === '/admin/feedback'      && request.method === 'GET')  return handleAdminFeedback(env);
       if (path === '/admin/names'         && request.method === 'POST') return handleAddName(request, env);
       if (path === '/admin/revoke'        && request.method === 'POST') return handleRevoke(request, env);
       if (path === '/admin/reactivate'    && request.method === 'POST') return handleReactivate(request, env);
@@ -566,4 +568,37 @@ async function handleReactivate(request, env) {
   await env.EVAL_KV.put(`c:${codeHash}`, JSON.stringify(record));
   await appendAdminLog(env, request, 'code_reactivate', { label: record.label, codeHash });
   return json({ ok: true }, 200, env);
+}
+
+async function handleFeedback(request, env) {
+  const ip = clientKey(request);
+  const rl = await checkRateLimit(env, `fb:ip:${ip}`);
+  if (rl.blocked) {
+    return json({ ok: false, error: 'Demasiados envíos. Espera antes de volver a intentar.' }, 429, env,
+      { 'Retry-After': String(rl.retryAfter) });
+  }
+
+  const body = await parseJsonBody(request);
+  if (!body) return json({ ok: false, error: 'Petición inválida' }, 400, env);
+
+  const { type, message } = body;
+  const VALID_TYPES = new Set(['sugerencia', 'queja']);
+  if (!VALID_TYPES.has(type)) return json({ ok: false, error: 'Tipo inválido' }, 400, env);
+  if (!message || typeof message !== 'string' || message.trim().length < 1 || message.length > 1000) {
+    return json({ ok: false, error: 'Mensaje inválido' }, 400, env);
+  }
+
+  await env.EVAL_KV.put(`fb:${Date.now()}-${randomHex(4)}`, JSON.stringify({
+    type, message: message.trim(), timestamp: nowIso(),
+    country: request.cf?.country || null,
+  }), { expirationTtl: 365 * 86400 });
+
+  return json({ ok: true }, 200, env);
+}
+
+async function handleAdminFeedback(env) {
+  const list = await env.EVAL_KV.list({ prefix: 'fb:' });
+  const sorted = [...list.keys].sort((a, b) => b.name.localeCompare(a.name));
+  const items = await Promise.all(sorted.map(k => env.EVAL_KV.get(k.name, 'json')));
+  return noStoreJson({ ok: true, feedbacks: items.filter(Boolean) }, 200, env);
 }

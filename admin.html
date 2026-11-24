@@ -71,6 +71,7 @@ const WORKER_URL = 'https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
 // secret holds a session token (never the password)
 let secret = sessionStorage.getItem('_adm') || '';
 let tab = 'arbitros';
+let feedbacks = [];
 let data = null;
 try { const c = sessionStorage.getItem('_adm_cache'); if(c) data = JSON.parse(c); } catch{}
 
@@ -154,6 +155,7 @@ function appHtml(){
   const pending=codes.filter(c=>c.status==='pending').length;
   const revoked=codes.filter(c=>c.status==='revoked').length;
   const pdfsHoy=logs.filter(l=>l.type==='pdf'&&(l.timestamp||'').startsWith(new Date().toISOString().slice(0,10))).length;
+  const fbCount=feedbacks.length;
 
   return `<div class="app">
   <header>
@@ -169,12 +171,14 @@ function appHtml(){
       <div class="stat"><div class="n" style="color:var(--orange)">${pending}</div><div class="l">Sin activar</div></div>
       <div class="stat"><div class="n" style="color:var(--ko)">${revoked}</div><div class="l">Revocados</div></div>
       <div class="stat"><div class="n">${pdfsHoy}</div><div class="l">PDFs hoy</div></div>
+      <div class="stat"><div class="n" style="color:var(--blue)">${fbCount}</div><div class="l">Feedback</div></div>
     </div>
     <div class="tabs">
       <button class="tab ${tab==='arbitros'?'on':''}" data-tab="arbitros">Árbitros</button>
       <button class="tab ${tab==='actividad'?'on':''}" data-tab="actividad">Actividad</button>
+      <button class="tab ${tab==='feedback'?'on':''}" data-tab="feedback">Feedback${fbCount?` <span style="background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px">${fbCount}</span>`:''}</button>
     </div>
-    ${tab==='arbitros' ? tabArbitros(codes) : tabActividad(logs)}
+    ${tab==='arbitros' ? tabArbitros(codes) : tab==='actividad' ? tabActividad(logs) : tabFeedback(feedbacks)}
   </div>
   <div id="modal"></div></div>`;
 }
@@ -225,6 +229,22 @@ function tabActividad(logs){
       <td><span class="ts">${fmtDate(l.timestamp)}</span></td>
     </tr>`).join('')}</tbody>
   </table>` : '<div class="empty">Sin actividad todavía.</div>'}
+  </div>`;
+}
+
+function tabFeedback(items){
+  if(!items.length) return `<div class="card"><div class="empty">Sin mensajes todavía.</div></div>`;
+  return `<div class="card" style="padding:0;overflow:hidden">
+  <table>
+    <thead><tr><th>Tipo</th><th>Mensaje</th><th>País</th><th>Fecha</th></tr></thead>
+    <tbody>${items.map(f=>`<tr>
+      <td>${f.type==='queja'?'<span class="pill ko">⚠ Queja</span>':'<span class="pill ok">💡 Sugerencia</span>'}</td>
+      <td style="max-width:320px;white-space:pre-wrap;word-break:break-word">${esc(f.message||'')}</td>
+      <td><span class="ts">${esc(f.country||'—')}</span></td>
+      <td><span class="ts">${fmtDate(f.timestamp)}</span></td>
+    </tr>`).join('')}
+    </tbody>
+  </table>
   </div>`;
 }
 
@@ -373,13 +393,18 @@ async function loadData(){
   try{
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),8000);
-    const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+secret},signal:ctrl.signal});
+    const headers={'Authorization':'Bearer '+secret};
+    const [r,rf]=await Promise.all([
+      fetch(WORKER_URL+'/admin/data',    {headers,signal:ctrl.signal}),
+      fetch(WORKER_URL+'/admin/feedback',{headers,signal:ctrl.signal}),
+    ]);
     clearTimeout(tid);
-    if(r.ok){data=await r.json();saveCache(data);render();}
-    else if(r.status===401||r.status===403){
-      // Token expired or invalid — go back to login
-      sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();
+    if(r.status===401||r.status===403){
+      sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();return;
     }
+    if(r.ok){data=await r.json();saveCache(data);}
+    if(rf.ok){const fd=await rf.json();feedbacks=fd.feedbacks||[];}
+    render();
   }catch(e){
     if(e&&e.name==='AbortError'&&data){render();}
     else console.error(e);

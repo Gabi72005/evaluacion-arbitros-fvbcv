@@ -316,9 +316,13 @@ function renderHome(){
         :'<div class="empty">Aún no hay evaluaciones.</div>'}
     </div>
     <div class="hint" style="text-align:center">Los datos se guardan solo en este dispositivo.</div>
+    <div style="text-align:center;margin:8px 0 16px">
+      <button id="fbBtn" style="background:none;border:none;color:var(--blue);font-size:13px;cursor:pointer;text-decoration:underline;padding:4px 8px">Sugerencias o quejas</button>
+    </div>
   </main>`;
   document.getElementById('exName').oninput=e=>{mem.examiner=e.target.value;persist();};
   document.getElementById('newBtn').onclick=()=>{S.cur=newEval();S.tab='datos';S.open={};S.view='eval';render();window.scrollTo(0,0)};
+  document.getElementById('fbBtn').onclick=()=>openFeedbackModal();
   $app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.cur=getEval(b.dataset.open);S.tab=S.cur.status==='done'?'final':'datos';S.open={};S.view='eval';render();window.scrollTo(0,0)});
   $app.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>exportPdf(getEval(b.dataset.pdf)));
   $app.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>confirmSheet('¿Borrar esta evaluación?','No se podrá recuperar.','Borrar',()=>{mem.evals=mem.evals.filter(e=>e.id!==b.dataset.del);persist();render();}));
@@ -465,6 +469,45 @@ function bindEval(ev,r){
 
 function bindN(ev){const ns=document.getElementById('f_nEval');if(ns)ns.onchange=()=>{ev.nEval=ns.value?+ns.value:'';ev.nEvalAuto=false;save();const h=document.getElementById('nEvalHint');if(h)h.textContent='Elegido a mano.';};}
 /* ---------- Diálogos ---------- */
+function openFeedbackModal(){
+  const md=document.getElementById('modal');
+  md.innerHTML=`<div class="modal"><div class="sheet">
+    <h3>Sugerencias o quejas</h3>
+    <p style="font-size:13px;color:var(--dim);margin:0 0 12px">Tu mensaje es anónimo. No se recoge ningún dato personal.</p>
+    <div style="display:flex;gap:12px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="fbtype" value="sugerencia" checked> Sugerencia</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="fbtype" value="queja"> Queja</label>
+    </div>
+    <textarea id="fbMsg" placeholder="Escribe tu mensaje…" maxlength="1000" style="width:100%;min-height:100px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:inherit;resize:vertical;box-sizing:border-box"></textarea>
+    <div id="fbChars" style="font-size:12px;color:var(--dim);text-align:right;margin-bottom:12px">0 / 1000</div>
+    <div id="fbErr" style="color:var(--ko);font-size:13px;margin-bottom:8px;display:none"></div>
+    <div class="stack">
+      <button class="btn pri" id="fbSend">Enviar</button>
+      <button class="btn sec" id="fbCancel">Cancelar</button>
+    </div>
+  </div></div>`;
+  const textarea=md.querySelector('#fbMsg');
+  textarea.oninput=()=>md.querySelector('#fbChars').textContent=textarea.value.length+' / 1000';
+  md.querySelector('#fbCancel').onclick=()=>md.innerHTML='';
+  md.querySelector('.modal').onclick=e=>{if(e.target.classList.contains('modal'))md.innerHTML='';};
+  md.querySelector('#fbSend').onclick=async()=>{
+    const type=md.querySelector('[name=fbtype]:checked')?.value;
+    const message=textarea.value.trim();
+    const err=md.querySelector('#fbErr');
+    const btn=md.querySelector('#fbSend');
+    err.style.display='none';
+    if(!message){err.textContent='Escribe un mensaje.';err.style.display='';return;}
+    btn.disabled=true;btn.textContent='Enviando…';
+    try{
+      const r=await fetch(WORKER_URL+'/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,message})});
+      if(r.status===429){err.textContent='Demasiados envíos. Espera unos minutos.';err.style.display='';btn.disabled=false;btn.textContent='Enviar';return;}
+      if(!r.ok){err.textContent='Error al enviar. Inténtalo de nuevo.';err.style.display='';btn.disabled=false;btn.textContent='Enviar';return;}
+      md.innerHTML='';
+      toast('Mensaje enviado. ¡Gracias!');
+    }catch{err.textContent='Error de conexión.';err.style.display='';btn.disabled=false;btn.textContent='Enviar';}
+  };
+}
+
 function confirmSheet(t,p,ok,fn){
   const md=document.getElementById('modal');
   md.innerHTML=`<div class="modal"><div class="sheet"><h3>${esc(t)}</h3><p>${esc(p)}</p><div class="stack"><button class="btn pri" id="mOk" style="background:var(--ko)">${esc(ok)}</button><button class="btn sec" id="mNo">Cancelar</button></div></div></div>`;
