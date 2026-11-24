@@ -120,6 +120,8 @@ async function handleValidate(request, env) {
 
   await env.EVAL_KV.put(`l:${Date.now()}-${randomHex(4)}`, JSON.stringify({
     type: 'login', label: record.label, deviceId, deviceInfo, timestamp: ts,
+    country: request.cf?.country || null,
+    city: request.cf?.city || null,
   }), { expirationTtl: 365 * 86400 });
 
   return json({ ok: true, token, label: record.label }, 200, env);

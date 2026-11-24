@@ -197,7 +197,7 @@ function tabActividad(logs){
       <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+l.nEval+'ª':''}</div>`:''}
           ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
       <td class="hide">${l.type==='pdf'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
-          ${l.type==='login'&&l.deviceInfo?`<div class="ts">${esc(l.deviceInfo.tz||'')}</div>`:''}</td>
+          ${l.type==='login'?`<div class="ts">${[l.city,l.country].filter(Boolean).join(', ')||'—'}${l.deviceInfo?` · ${esc(l.deviceInfo.tz||'')}`:''}</div>`:''}</td>
       <td><span class="ts">${fmtDate(l.timestamp)}</span></td>
     </tr>`).join('')}</tbody>
   </table>` : '<div class="empty">Sin actividad todavía.</div>'}
