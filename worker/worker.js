@@ -328,8 +328,12 @@ async function handleValidate(request, env) {
     record.deviceId = deviceId;
     record.deviceInfo = deviceInfo;
     record.usedAt = ts;
-    await env.EVAL_KV.put(`c:${hash}`, JSON.stringify(record));
   }
+  // Always refresh last-login metadata so the admin sees current device & timestamp
+  record.lastLogin = ts;
+  record.lastDeviceId = deviceId;
+  record.lastDeviceInfo = deviceInfo;
+  await env.EVAL_KV.put(`c:${hash}`, JSON.stringify(record));
 
   await env.EVAL_KV.put(`s:${token}`, JSON.stringify({
     codeHash: hash, label: record.label, deviceId, createdAt: ts, lastSeen: ts,

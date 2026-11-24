@@ -210,7 +210,7 @@ function renderLogin(err){
     try{
       const r=await fetch(WORKER_URL+'/auth/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,deviceId:getDeviceId(),deviceInfo:getDeviceInfo()})});
       const d=await r.json();
-      if(d.ok){localStorage.setItem('_session',d.token);if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');if(d.label){localStorage.setItem('_session_label',d.label);mem.examiner=d.label;persist();}render();}
+      if(d.ok){localStorage.setItem('_session',d.token);if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');if(d.label){localStorage.setItem('_session_label',d.label);mem.examiner=d.label;persist();}startSessionWatch();render();}
       else{errEl.textContent=d.error||'Código incorrecto';btn.disabled=false;btn.textContent='Entrar';}
     }catch(e){errEl.textContent='Error de conexión. Comprueba internet.';btn.disabled=false;btn.textContent='Entrar';}
   };
@@ -230,7 +230,7 @@ async function initApp(){
         try{localStorage.setItem('_lastVerified',String(Date.now()));}catch{}
         if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');
         if(d.label){localStorage.setItem('_session_label',d.label);mem.examiner=d.label;persist();}
-        render();return;
+        startSessionWatch();render();return;
       }
     }catch(e){
       if(e&&e.name==='AbortError'){
@@ -241,13 +241,37 @@ async function initApp(){
         }catch{}
       }
     }
+    stopSessionWatch();
     localStorage.removeItem('_session');localStorage.removeItem('_master');localStorage.removeItem('_session_label');
   }
   renderLogin();
 }
 function exitMaster(){
+  stopSessionWatch();
   try{localStorage.removeItem('_session');localStorage.removeItem('_master');}catch{}
   renderLogin();
+}
+
+/* ---------- Vigilancia de sesión (re-verifica cada 2 min) ---------- */
+let _watchTimer=null;
+function startSessionWatch(){
+  if(_watchTimer) return;
+  _watchTimer=setInterval(async()=>{
+    const tok=localStorage.getItem('_session');
+    if(!tok){stopSessionWatch();return;}
+    try{
+      const r=await fetch(WORKER_URL+'/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok})});
+      const d=await r.json();
+      if(!d.ok){
+        stopSessionWatch();
+        localStorage.removeItem('_session');localStorage.removeItem('_master');localStorage.removeItem('_session_label');
+        renderLogin('Tu acceso ha sido revocado. Contacta con el examinador jefe.');
+      }
+    }catch{}
+  },2*60*1000);
+}
+function stopSessionWatch(){
+  if(_watchTimer){clearInterval(_watchTimer);_watchTimer=null;}
 }
 function masterBanner(){
   if(!localStorage.getItem('_master')) return '';
@@ -307,7 +331,8 @@ function render(){
 function renderHome(){
   const list=[...mem.evals].sort((a,b)=>b.updated-a.updated);
   $app.innerHTML=`
-  <header class="top"><img src="fvbcv-logo.png" alt="FVBCV" style="height:34px;width:34px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px"><h1>Evaluación de árbitros<span class="sub">FVBCV · Plantilla examinador</span></h1></header>
+  <header class="top"><img src="fvbcv-logo.png" alt="FVBCV" style="height:34px;width:34px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px"><h1>Evaluación de árbitros<span class="sub">FVBCV · Plantilla examinador</span></h1>
+    <button class="iconbtn" id="logoutBtn" title="Cerrar sesión" style="font-size:12px;font-weight:700;padding:0 10px;min-width:auto">Salir</button></header>
   ${masterBanner()}
   <main>
     <div class="card">
@@ -335,6 +360,11 @@ function renderHome(){
   </main>`;
   document.getElementById('newBtn').onclick=()=>{S.cur=newEval();S.tab='datos';S.open={};S.view='eval';render();window.scrollTo(0,0)};
   document.getElementById('fbBtn').onclick=()=>openFeedbackModal();
+  document.getElementById('logoutBtn').onclick=()=>{
+    stopSessionWatch();
+    localStorage.removeItem('_session');localStorage.removeItem('_master');localStorage.removeItem('_session_label');
+    renderLogin();
+  };
   $app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.cur=getEval(b.dataset.open);S.tab=S.cur.status==='done'?'final':'datos';S.open={};S.view='eval';render();window.scrollTo(0,0)});
   $app.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>exportPdf(getEval(b.dataset.pdf)));
   $app.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>confirmSheet('¿Borrar esta evaluación?','No se podrá recuperar.','Borrar',()=>{mem.evals=mem.evals.filter(e=>e.id!==b.dataset.del);persist();render();}));

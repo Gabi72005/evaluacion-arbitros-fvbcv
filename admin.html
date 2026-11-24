@@ -374,8 +374,8 @@ function tabArbitros(codes){
       <td><b>${esc(c.label)}</b></td>
       <td><span class="code">${esc(c.code||'...')}</span></td>
       <td>${statusPill(c.status)}</td>
-      <td class="hide">${c.deviceInfo?`${parseBrowser(c.deviceInfo.ua)}<div class="ua">${esc(c.deviceInfo.screen||'')} · ${esc(c.deviceInfo.lang||'')}</div>`:'<span class="ts">—</span>'}</td>
-      <td class="hide"><span class="ts">${c.usedAt?fmtDate(c.usedAt):'—'}</span></td>
+      <td class="hide">${(c.lastDeviceInfo||c.deviceInfo)?`${parseBrowser((c.lastDeviceInfo||c.deviceInfo).ua)}<div class="ua">${esc((c.lastDeviceInfo||c.deviceInfo).screen||'')} · ${esc((c.lastDeviceInfo||c.deviceInfo).lang||'')}</div>`:'<span class="ts">—</span>'}</td>
+      <td class="hide"><span class="ts">${(c.lastLogin||c.usedAt)?fmtDate(c.lastLogin||c.usedAt):'—'}</span></td>
       <td><div class="acts">
         <button class="btn sec" data-msg="${esc(c.codeHash)}" style="font-size:12px;padding:5px 9px;line-height:0" title="Generar mensaje de bienvenida"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
         ${c.status!=='revoked'
