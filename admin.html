@@ -560,6 +560,34 @@ function showAddModal(){
     const name=document.getElementById('mname').value.trim();
     const err=document.getElementById('mErr');
     if(!name){err.textContent='Escribe el nombre.';return;}
+    // A3: check for similar names before calling the API
+    const normN=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    const norm=normN(name);
+    const similar=(data.codes||[]).filter(c=>{
+      const cn=normN(c.label); if(!cn||c.status==='revoked') return false;
+      if(cn===norm&&c.label.trim()!==name) return true;
+      if(cn.includes(norm)||norm.includes(cn)) return true;
+      const wp=norm.split(' '),wc=cn.split(' ');
+      return wp.length>=2&&wc.length>=2&&wp[0]===wc[0]&&wp[1]===wc[1];
+    });
+    if(similar.length){
+      const res=document.getElementById('mResult');
+      res.innerHTML=`<div style="background:var(--warn-l);border:1px solid #f59e0b;border-radius:8px;padding:12px;font-size:13px">
+        <b>Ya existe un árbitro parecido:</b><br>${similar.map(c=>`<span style="color:var(--ink)">${esc(c.label)}</span> <span class="code" style="font-size:11px">${esc(c.code||'...')}</span> ${statusPill(c.status)}`).join('<br>')}
+        <br><span style="color:var(--mute)">¿Es la misma persona?</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn sec" id="mSamePerson" style="flex:1;font-size:12px">Es la misma persona</button>
+        <button class="btn pri" id="mDiffPerson" style="flex:1;font-size:12px">Es otra persona, generar código</button>
+      </div>`;
+      document.getElementById('mSamePerson').onclick=()=>{md.innerHTML='';};
+      document.getElementById('mDiffPerson').onclick=()=>{res.innerHTML='';proceedAdd(name);};
+      return;
+    }
+    proceedAdd(name);
+  };
+  async function proceedAdd(name){
+    const err=document.getElementById('mErr');
     const btn=document.getElementById('mAdd');
     btn.disabled=true;btn.textContent='Generando…';
     try{
