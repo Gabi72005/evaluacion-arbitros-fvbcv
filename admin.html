@@ -68,6 +68,8 @@ label.f{display:block;font-size:11px;color:var(--mute);margin:10px 0 4px;font-we
 <div id="root"></div>
 <script>
 const WORKER_URL = 'https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
+const APP_URL    = 'https://evaluacion-arbitros-fvbcv.pages.dev'; // URL de la app del árbitro
+const GUIDE_URL  = ''; // URL del PDF guía — déjalo vacío si aún no tienes el PDF
 // secret holds a session token (never the password)
 let secret = sessionStorage.getItem('_adm') || '';
 let tab = 'arbitros';
@@ -203,6 +205,7 @@ function tabArbitros(codes){
       <td class="hide">${c.deviceInfo?`${parseBrowser(c.deviceInfo.ua)}<div class="ua">${esc(c.deviceInfo.screen||'')} · ${esc(c.deviceInfo.lang||'')}</div>`:'<span class="ts">—</span>'}</td>
       <td class="hide"><span class="ts">${c.usedAt?fmtDate(c.usedAt):'—'}</span></td>
       <td><div class="acts">
+        <button class="btn sec" data-msg="${esc(c.codeHash)}" style="font-size:12px;padding:6px 10px" title="Generar mensaje de bienvenida">📋</button>
         ${c.status!=='revoked'
           ?`<button class="btn dan" data-revoke="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Revocar</button>`
           :`<button class="btn ok2" data-reactivate="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Reactivar</button>
@@ -259,6 +262,37 @@ function statusPill(s){
   return `<span class="pill na">${esc(s)}</span>`;
 }
 
+function showMsgModal(c){
+  const nombre=c.label||'árbitro';
+  const codigo=c.code||'(código no disponible — recarga la página)';
+  const guia=GUIDE_URL?`\n\n📄 Guía de uso de la aplicación:\n${GUIDE_URL}`:'';
+  const msg=`Hola ${nombre},\n\nTe informamos de que has sido seleccionado/a como árbitro examinador/a en la FVBCV.\n\nPara acceder a la aplicación de evaluación, utiliza el siguiente código:\n\n🔑 Código: ${codigo}\n\n📱 Accede desde:\n${APP_URL}${guia}\n\nSi tienes algún problema para acceder, contacta con nosotros.\n\nUn saludo,\nFVBCV`;
+
+  const md=document.getElementById('modal');
+  md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet" style="max-width:520px">
+    <h3 style="margin:0 0 4px">Mensaje para ${esc(nombre)}</h3>
+    <p style="font-size:13px;color:var(--dim);margin:0 0 12px">Copia y pega en WhatsApp, email o donde prefieras.</p>
+    <textarea id="msgTxt" readonly style="width:100%;min-height:200px;border:1.5px solid var(--line);border-radius:10px;padding:12px;font:inherit;font-size:13px;resize:vertical;box-sizing:border-box;background:#f7f8fc">${esc(msg)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn pri" id="msgCopy" style="flex:1">📋 Copiar mensaje</button>
+      <button class="btn sec" id="msgClose">Cerrar</button>
+    </div>
+  </div></div>`;
+  document.getElementById('msgClose').onclick=()=>md.innerHTML='';
+  document.getElementById('mbg').onclick=e=>{if(e.target.id==='mbg')md.innerHTML='';};
+  document.getElementById('msgCopy').onclick=async()=>{
+    try{
+      await navigator.clipboard.writeText(msg);
+      const btn=document.getElementById('msgCopy');
+      btn.textContent='✓ Copiado';btn.style.background='var(--ok)';
+      setTimeout(()=>{if(btn){btn.textContent='📋 Copiar mensaje';btn.style.background='';}},2000);
+    }catch{
+      document.getElementById('msgTxt').select();
+      document.execCommand('copy');
+    }
+  };
+}
+
 async function fbDelete(key){
   try{
     await fetch(WORKER_URL+'/admin/feedback/delete',{
@@ -292,6 +326,10 @@ function bindApp(){
   document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=()=>showRevokeModal(b.dataset.revoke,b.dataset.label));
   document.querySelectorAll('[data-reactivate]').forEach(b=>b.onclick=()=>doReactivate(b.dataset.reactivate,b.dataset.label));
   document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>doDelete(b.dataset.delete,b.dataset.label));
+  document.querySelectorAll('[data-msg]').forEach(b=>b.onclick=()=>{
+    const c=(data.codes||[]).find(x=>x.codeHash===b.dataset.msg);
+    if(c) showMsgModal(c);
+  });
 }
 
 /* ---- MODALES ---- */
