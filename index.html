@@ -495,10 +495,23 @@ function bindEval(ev,r){
   m.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.goto;render();window.scrollTo(0,0)});
   m.querySelectorAll('[data-set]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.set, it=ev.items[k]||(ev.items[k]={});
+    const prevV=it.v;
     it.v= it.v===b.dataset.v? null : b.dataset.v;
     if(it.v==='no'&&!it.obs) S.open[k]=true;
     save(); const y=window.scrollY; render(); window.scrollTo(0,y);
-    if(it.v==='no'&&S.open[k]){const t=document.querySelector(`[data-obstext="${k}"]`); if(t&&!it.obs) t.focus({preventScroll:true});}
+    const opensObs=it.v==='no'&&S.open[k];
+    if(opensObs){const t=document.querySelector(`[data-obstext="${k}"]`); if(t&&!it.obs) t.focus({preventScroll:true});}
+    // U2: auto-advance to next pending item when setting a new value (not correcting, not opening obs)
+    if(it.v && !prevV && !opensObs){
+      setTimeout(()=>{
+        const allItems=[...document.querySelectorAll('.item')];
+        const cur=document.getElementById('it_'+k.replace('.','_'));
+        const curIdx=cur?allItems.indexOf(cur):-1;
+        const next=allItems.slice(curIdx+1).find(el=>!el.classList.contains('apto')&&!el.classList.contains('no'));
+        if(next){next.scrollIntoView({behavior:'smooth',block:'center'});}
+        else{const nx=document.querySelector('[data-goto]');if(nx)nx.scrollIntoView({behavior:'smooth',block:'center'});}
+      },150);
+    }
   });
   m.querySelectorAll('[data-obs]').forEach(b=>b.onclick=()=>{const k=b.dataset.obs;S.open[k]=!S.open[k];const y=window.scrollY;render();window.scrollTo(0,y);
     if(S.open[k]){const t=document.querySelector(`[data-obstext="${k}"]`);t&&t.focus({preventScroll:true});}});
