@@ -80,7 +80,7 @@ nav.tabs button.on{background:var(--blue-l);color:var(--blue-d)}
 .hist li{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
 .hist li:first-child{border-top:0}
 .hist .main{flex:1;min-width:0}
-.hist .nm{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist .nm{font-weight:650;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .hist .ds{font-size:13px;color:var(--mute)}
 .hist .act{display:flex;gap:6px}
 .hist .act button{border:1px solid var(--line);background:#fff;border-radius:9px;height:36px;min-width:36px;padding:0 9px;font-size:13px;font-weight:600}
@@ -353,7 +353,7 @@ function renderHome(){
         <div class="ds">${e.role?ROLES[e.role].short:'Sin rol'}${e.nEval?' · '+esc(ordinal(e.nEval))+' eval.':''} · ${esc(fmtDate(e.fecha))}${e.partido?' · '+esc(e.partido):''}</div></div>
         <div class="act"><button data-open="${e.id}">${e.status==='done'?'Ver':'Seguir'}</button>
         ${e.status==='done'?`<button data-pdf="${e.id}" title="PDF">PDF</button>`:''}
-        <button data-del="${e.id}" aria-label="Borrar">Borrar</button></div></li>`}).join('')}</ul>`
+        <button data-del="${e.id}" data-aspirant="${esc(e.aspirant||'Sin nombre')}" data-role="${esc(e.role?ROLES[e.role].short:'Sin rol')}" data-fecha="${esc(fmtDate(e.fecha))}" aria-label="Más opciones" title="Más opciones">⋯</button></div></li>`}).join('')}</ul>`
         :'<div class="empty">Aún no hay evaluaciones.</div>'}
     </div>
     <div class="hint" style="text-align:center">Los datos se guardan solo en este dispositivo.</div>
@@ -370,7 +370,10 @@ function renderHome(){
   };
   $app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.cur=getEval(b.dataset.open);S.tab=S.cur.status==='done'?'final':'datos';S.open={};S.view='eval';render();window.scrollTo(0,0)});
   $app.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>exportPdf(getEval(b.dataset.pdf)));
-  $app.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>confirmSheet('¿Borrar esta evaluación?','No se podrá recuperar.','Borrar',()=>{mem.evals=mem.evals.filter(e=>e.id!==b.dataset.del);persist();render();}));
+  $app.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.del,asp=b.dataset.aspirant,rol=b.dataset.role,fecha=b.dataset.fecha;
+    confirmSheet(`¿Borrar la evaluación de ${asp}?`,`${rol} · ${fecha}\nNo se puede deshacer.`,'Borrar evaluación',()=>{mem.evals=mem.evals.filter(e=>e.id!==id);persist();render();});
+  });
 }
 
 const TABS=[['datos','Datos','✎'],['antes','Antes','①'],['durante','Durante','②'],['despues','Después','③'],['final','Final','✔']];
