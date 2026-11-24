@@ -179,7 +179,8 @@ function tabArbitros(codes){
       <td><div class="acts">
         ${c.status!=='revoked'
           ?`<button class="btn dan" data-revoke="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Revocar</button>`
-          :`<button class="btn ok2" data-reactivate="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Reactivar</button>`}
+          :`<button class="btn ok2" data-reactivate="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Reactivar</button>
+           <button class="btn dan" data-delete="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Eliminar</button>`}
       </div></td>
     </tr>`).join('')}</tbody>
   </table>` : '<div class="empty">No hay árbitros. Añade el primero.</div>'}
@@ -217,6 +218,7 @@ function bindApp(){
   const pb=document.getElementById('pdfBtn');if(pb)pb.onclick=()=>downloadCodespdf(data.codes||[]);
   document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=()=>showRevokeModal(b.dataset.revoke,b.dataset.label));
   document.querySelectorAll('[data-reactivate]').forEach(b=>b.onclick=()=>doReactivate(b.dataset.reactivate,b.dataset.label));
+  document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>doDelete(b.dataset.delete,b.dataset.label));
 }
 
 /* ---- MODALES ---- */
@@ -303,6 +305,20 @@ function showRevokeModal(codeHash,label){
       else{btn.disabled=false;btn.textContent='Revocar acceso';}
     }catch{btn.disabled=false;btn.textContent='Revocar acceso';}
   };
+}
+
+async function doDelete(codeHash,label){
+  if(!confirm(`¿Eliminar a ${label} permanentemente? Esta acción no se puede deshacer.`)) return;
+  try{
+    const r=await fetch(WORKER_URL+'/admin/delete',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
+      body:JSON.stringify({codeHash})
+    });
+    if((await r.json()).ok){
+      data.codes=data.codes.filter(c=>c.codeHash!==codeHash);
+      saveCache(data);render();
+    }else{alert('Error al eliminar');}
+  }catch{alert('Error de conexión');}
 }
 
 async function doReactivate(codeHash,label){

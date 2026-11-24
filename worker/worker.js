@@ -67,6 +67,7 @@ export default {
       if (path === '/admin/reactivate'   && request.method === 'POST') return handleReactivate(request, env);
       if (path === '/admin/multidevice'   && request.method === 'POST') return handleMultiDevice(request, env);
       if (path === '/admin/create-fixed'  && request.method === 'POST') return handleCreateFixed(request, env);
+      if (path === '/admin/delete'        && request.method === 'POST') return handleDelete(request, env);
     }
 
     return json({ error: 'Not found' }, 404, env);
@@ -249,6 +250,19 @@ async function handleMultiDevice(request, env) {
   record.deviceId = null;
   record.deviceInfo = null;
   await env.EVAL_KV.put(`c:${codeHash}`, JSON.stringify(record));
+  return json({ ok: true }, 200, env);
+}
+
+async function handleDelete(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Petición inválida' }, 400, env); }
+
+  const { codeHash } = body;
+  const record = await env.EVAL_KV.get(`c:${codeHash}`, 'json');
+  if (!record) return json({ error: 'No encontrado' }, 404, env);
+  if (record.status !== 'revoked') return json({ error: 'Solo se pueden eliminar árbitros revocados' }, 400, env);
+
+  await env.EVAL_KV.delete(`c:${codeHash}`);
   return json({ ok: true }, 200, env);
 }
 
