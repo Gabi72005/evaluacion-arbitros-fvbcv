@@ -312,9 +312,8 @@ function bindLogin(){
       const ld=await lr.json();
       if(!lr.ok||!ld.ok){err.textContent='Contraseña incorrecta';btn.disabled=false;btn.textContent='Entrar';return;}
       secret=ld.token;sessionStorage.setItem('_adm',ld.token);
-      const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+secret}});
-      if(r.ok){data=await r.json();render();}
-      else{err.textContent='Error al cargar datos';btn.disabled=false;btn.textContent='Entrar';}
+      try{await loadData();}
+      catch{err.textContent='Error al cargar datos';btn.disabled=false;btn.textContent='Entrar';}
     }catch{err.textContent='Error de conexión';btn.disabled=false;btn.textContent='Entrar';}
   };
 }
@@ -450,10 +449,14 @@ function showMsgModal(c){
       </div>
     </div>
     <div class="modal-bd">
-      <textarea id="msgTxt" readonly style="width:100%;min-height:200px;border:1.5px solid var(--line);border-radius:8px;padding:12px;font-size:13px;line-height:1.5;resize:vertical;background:#f8fafc">${esc(msg)}</textarea>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn pri" id="msgCopy" style="flex:1">Copiar mensaje</button>
-        <button class="btn sec" id="msgClose">Cerrar</button>
+      <textarea id="msgTxt" readonly style="width:100%;min-height:180px;border:1.5px solid var(--line);border-radius:8px;padding:12px;font-size:13px;line-height:1.5;resize:vertical;background:#f8fafc">${esc(msg)}</textarea>
+      <div class="stack" style="margin-top:12px">
+        <button class="btn pri" id="msgCopy" style="justify-content:center">Copiar mensaje</button>
+        <div style="display:flex;gap:8px">
+          <a class="btn sec" id="msgWa" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" style="flex:1;justify-content:center;text-decoration:none">WhatsApp</a>
+          <a class="btn sec" id="msgMail" href="mailto:?subject=${encodeURIComponent('Acceso a la app de evaluación de árbitros FVBCV')}&body=${encodeURIComponent(msg)}" style="flex:1;justify-content:center;text-decoration:none">Correo</a>
+        </div>
+        <button class="btn sec" id="msgClose" style="justify-content:center">Cerrar</button>
       </div>
     </div>
   </div></div>`;
@@ -463,7 +466,7 @@ function showMsgModal(c){
     try{
       await navigator.clipboard.writeText(msg);
       const btn=document.getElementById('msgCopy');
-      btn.textContent='Copiado';btn.style.background='var(--ok)';
+      btn.textContent='¡Copiado!';btn.style.background='var(--ok)';
       setTimeout(()=>{if(btn){btn.textContent='Copiar mensaje';btn.style.background='';}},2000);
     }catch{
       document.getElementById('msgTxt').select();
@@ -503,8 +506,8 @@ function bindApp(){
   const ab=document.getElementById('addBtn');if(ab)ab.onclick=showAddModal;
   const pb=document.getElementById('pdfBtn');if(pb)pb.onclick=()=>downloadCodespdf(data.codes||[]);
   document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=()=>showRevokeModal(b.dataset.revoke,b.dataset.label));
-  document.querySelectorAll('[data-reactivate]').forEach(b=>b.onclick=()=>doReactivate(b.dataset.reactivate,b.dataset.label));
-  document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>doDelete(b.dataset.delete,b.dataset.label));
+  document.querySelectorAll('[data-reactivate]').forEach(b=>b.onclick=()=>showReactivateModal(b.dataset.reactivate,b.dataset.label));
+  document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>showDeleteModal(b.dataset.delete,b.dataset.label));
   document.querySelectorAll('[data-msg]').forEach(b=>b.onclick=()=>{
     const c=(data.codes||[]).find(x=>x.codeHash===b.dataset.msg);
     if(c) showMsgModal(c);
@@ -577,18 +580,19 @@ function showAddModal(){
   };
 }
 
-function showRevokeModal(codeHash,label){
+function showConfirmModal({title,sub,okLabel,okClass,loadingLabel,onOk}){
   const md=document.getElementById('modal');
   md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet">
     <div class="modal-hd">
       <div class="modal-ttl">
-        <h3>Revocar acceso</h3>
-        <div class="modal-sub">¿Revocar a <strong>${esc(label)}</strong>? No podrá entrar. Puedes reactivarlo después.</div>
+        <h3>${esc(title)}</h3>
+        ${sub?`<div class="modal-sub">${sub}</div>`:''}
       </div>
     </div>
     <div class="modal-bd">
+      <div id="cmErr" style="color:var(--ko);font-size:13px;margin-bottom:8px;min-height:0"></div>
       <div class="stack">
-        <button class="btn dan" id="mOk" style="justify-content:center">Revocar acceso</button>
+        <button class="btn ${esc(okClass||'dan')}" id="mOk" style="justify-content:center">${esc(okLabel)}</button>
         <button class="btn sec" id="mNo" style="justify-content:center">Cancelar</button>
       </div>
     </div>
@@ -597,41 +601,61 @@ function showRevokeModal(codeHash,label){
   md.querySelector('#mNo').onclick=close;
   md.querySelector('#mbg').onclick=e=>{if(e.target===md.querySelector('#mbg'))close();};
   document.getElementById('mOk').onclick=async()=>{
-    const btn=document.getElementById('mOk');btn.disabled=true;btn.textContent='Revocando…';
+    const btn=document.getElementById('mOk');btn.disabled=true;btn.textContent=loadingLabel||'Espera…';
     try{
+      const err=await onOk();
+      if(err){document.getElementById('cmErr').textContent=err;btn.disabled=false;btn.textContent=okLabel;}
+      else{close();}
+    }catch{document.getElementById('cmErr').textContent='Error de conexión';btn.disabled=false;btn.textContent=okLabel;}
+  };
+}
+
+function showRevokeModal(codeHash,label){
+  showConfirmModal({
+    title:'Revocar acceso',
+    sub:`¿Revocar a <strong>${esc(label)}</strong>? No podrá entrar. Puedes reactivarlo después.`,
+    okLabel:'Revocar acceso',okClass:'dan',loadingLabel:'Revocando…',
+    onOk:async()=>{
       const r=await fetch(WORKER_URL+'/admin/revoke',{
         method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
         body:JSON.stringify({codeHash})
       });
-      if((await r.json()).ok){close();await loadData();}
-      else{btn.disabled=false;btn.textContent='Revocar acceso';}
-    }catch{btn.disabled=false;btn.textContent='Revocar acceso';}
-  };
+      if((await r.json()).ok){await loadData();return null;}
+      return 'No se pudo revocar. Inténtalo de nuevo.';
+    }
+  });
 }
 
-async function doDelete(codeHash,label){
-  if(!confirm(`¿Eliminar a ${label} permanentemente? Esta acción no se puede deshacer.`)) return;
-  try{
-    const r=await fetch(WORKER_URL+'/admin/delete',{
-      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
-      body:JSON.stringify({codeHash})
-    });
-    if((await r.json()).ok){
-      data.codes=data.codes.filter(c=>c.codeHash!==codeHash);
-      saveCache(data);render();
-    }else{alert('Error al eliminar');}
-  }catch{alert('Error de conexión');}
+function showReactivateModal(codeHash,label){
+  showConfirmModal({
+    title:'Reactivar acceso',
+    sub:`¿Reactivar a <strong>${esc(label)}</strong>? Se le asignará el mismo código que tenía.`,
+    okLabel:'Reactivar acceso',okClass:'ok2',loadingLabel:'Reactivando…',
+    onOk:async()=>{
+      const r=await fetch(WORKER_URL+'/admin/reactivate',{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
+        body:JSON.stringify({codeHash})
+      });
+      if((await r.json()).ok){await loadData();return null;}
+      return 'No se pudo reactivar. Inténtalo de nuevo.';
+    }
+  });
 }
 
-async function doReactivate(codeHash,label){
-  if(!confirm(`¿Reactivar acceso de ${label}? Se le asignará el mismo código que tenía.`)) return;
-  try{
-    const r=await fetch(WORKER_URL+'/admin/reactivate',{
-      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
-      body:JSON.stringify({codeHash})
-    });
-    if((await r.json()).ok) await loadData();
-  }catch{alert('Error de conexión');}
+function showDeleteModal(codeHash,label){
+  showConfirmModal({
+    title:'Eliminar árbitro',
+    sub:`¿Eliminar a <strong>${esc(label)}</strong> permanentemente?<br><strong>Esta acción no se puede deshacer.</strong>`,
+    okLabel:'Eliminar',okClass:'dan',loadingLabel:'Eliminando…',
+    onOk:async()=>{
+      const r=await fetch(WORKER_URL+'/admin/delete',{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
+        body:JSON.stringify({codeHash})
+      });
+      if((await r.json()).ok){data.codes=data.codes.filter(c=>c.codeHash!==codeHash);saveCache(data);render();return null;}
+      return 'No se pudo eliminar. Inténtalo de nuevo.';
+    }
+  });
 }
 
 async function loadData(){
