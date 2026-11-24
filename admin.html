@@ -347,37 +347,44 @@ async function loadData(){
   }
 }
 
-function downloadCodespdf(codes){
-  const sorted=[...codes].filter(c=>c.status!=='revoked').sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
-  const date=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const rows=sorted.map((c,i)=>`
-    <tr style="background:${i%2===0?'#f8f9fa':'#fff'}">
-      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb">${esc(c.label)}</td>
-      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.1em;color:#7A3800;background:#FFF0D0">${esc(c.code||'—')}</td>
-      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;color:${c.status==='active'?'#17844a':'#999'}">${c.status==='active'?'Activo':'Sin activar'}</td>
-    </tr>`).join('');
-  const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>Árbitros FVBCV - Códigos de acceso</title>
-  <style>
-    body{font-family:system-ui,sans-serif;margin:40px;color:#1a1a1a}
-    h1{font-size:22px;margin:0 0 4px}
-    .sub{font-size:13px;color:#666;margin:0 0 24px}
-    table{width:100%;border-collapse:collapse;font-size:14px}
-    th{background:#1E20E8;color:#fff;padding:10px 14px;text-align:left;font-weight:600}
-    @media print{body{margin:20px}}
-  </style></head><body>
-  <h1>Árbitros FVBCV — Códigos de acceso</h1>
-  <p class="sub">Generado el ${date} · ${sorted.length} árbitros · Confidencial</p>
-  <table><thead><tr><th>Nombre</th><th>Código</th><th>Estado</th></tr></thead>
-  <tbody>${rows}</tbody></table>
-  <script>window.onload=()=>{window.print();}<\/script>
-  </body></html>`;
-  const blob=new Blob([html],{type:'text/html'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`arbitros-fvbcv-${date.replace(/\//g,'-')}.html`;
-  document.body.appendChild(a);a.click();
-  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+function loadScript(src){
+  return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+}
+
+async function downloadCodespdf(codes){
+  const btn=document.getElementById('pdfBtn');
+  if(btn){btn.disabled=true;btn.textContent='Generando…';}
+  try{
+    if(!window.jspdf){
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    }
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF();
+    const date=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const sorted=[...codes].filter(c=>c.status!=='revoked').sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
+
+    // Cabecera
+    doc.setFontSize(18);doc.setTextColor(30,32,232);
+    doc.text('Árbitros FVBCV — Códigos de acceso',14,18);
+    doc.setFontSize(10);doc.setTextColor(93,107,122);
+    doc.text(`Generado el ${date}  ·  ${sorted.length} árbitros  ·  Confidencial`,14,26);
+
+    doc.autoTable({
+      startY:32,
+      head:[['Nombre','Código','Estado']],
+      body:sorted.map(c=>[c.label||'',c.code||'—',c.status==='active'?'Activo':'Sin activar']),
+      headStyles:{fillColor:[30,32,232],textColor:255,fontStyle:'bold',fontSize:11},
+      bodyStyles:{textColor:[22,32,44],fontSize:11,cellPadding:6},
+      columnStyles:{1:{fontStyle:'bold',textColor:[122,56,0],cellWidth:48}},
+      alternateRowStyles:{fillColor:[248,249,250]},
+      didParseCell(d){if(d.section==='body'&&d.column.index===2){d.cell.styles.textColor=d.cell.raw==='Activo'?[23,132,74]:[150,150,150];}},
+    });
+
+    doc.save(`arbitros-fvbcv-${date.replace(/\//g,'-')}.pdf`);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='⬇ Descargar PDF';}
+  }
 }
 
 render();
