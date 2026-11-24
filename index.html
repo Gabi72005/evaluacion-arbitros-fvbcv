@@ -188,7 +188,7 @@ const PAGE_H = 841.92, ANNEX_PAGE = 3;
 const WORKER_URL='https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
 function getDeviceId(){let id=localStorage.getItem('_did');if(!id){id=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);localStorage.setItem('_did',id);}return id;}
 function getDeviceInfo(){try{return{ua:navigator.userAgent.slice(0,200),screen:screen.width+'x'+screen.height,lang:navigator.language,tz:Intl.DateTimeFormat().resolvedOptions().timeZone};}catch(e){return{};}}
-function logPdfExport(ev){const token=localStorage.getItem('_session');if(!token)return;fetch(WORKER_URL+'/log/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,aspirant:ev.aspirant,role:ev.role,examiner:ev.examiner,nEval:ev.nEval,fecha:ev.fecha})}).catch(()=>{});}
+function logPdfExport(ev){const token=localStorage.getItem('_session');if(!token)return;const g=globalStats(ev);fetch(WORKER_URL+'/log/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,aspirant:ev.aspirant,role:ev.role,examiner:ev.examiner,nEval:ev.nEval,fecha:ev.fecha,passed:g?g.pass:null})}).catch(()=>{});}
 function renderLogin(err){
   document.getElementById('app').innerHTML=`<header class="top"><img src="fvbcv-logo.png" alt="FVBCV" style="height:36px;width:36px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px"><h1>Evaluación Árbitros<span class="sub">FVBCV · Acceso privado</span></h1></header>
   <main style="display:grid;place-items:center;min-height:calc(100vh - 64px);padding:14px">

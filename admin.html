@@ -271,6 +271,13 @@ function fmtDate(iso){
   }catch{return iso;}
 }
 
+function fmtRole(r){
+  if(r==='primero') return '1º árb.';
+  if(r==='segundo') return '2º árb.';
+  if(r==='anotador') return 'Anotador';
+  return esc(r||'—');
+}
+
 function parseBrowser(ua){
   if(!ua) return '—';
   if(/iPhone|iPad/.test(ua)) return 'iOS';
@@ -405,7 +412,7 @@ function tabActividad(logs){
     <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th></tr></thead>
     <tbody id="actTbody">${logs.map(l=>`<tr>
       <td>${l.type==='pdf'?'<span class="pill ok">PDF</span>':'<span class="pill na">Login</span>'}</td>
-      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+esc(String(l.nEval))+'ª':''}</div>`:''}
+      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">${esc(l.aspirant||'')} · ${fmtRole(l.role)}${l.nEval?' · Eval. '+esc(String(l.nEval))+'ª':''}${l.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px 2px 5px">Supera</span>':l.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px 2px 5px">No supera</span>':''}</div>`:''}
           ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
       <td class="hide">${l.type==='pdf'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
           ${l.type==='login'?`<div class="ts">${[l.city,l.country].filter(Boolean).join(', ')||'—'}${l.deviceInfo?` · ${esc(l.deviceInfo.tz||'')}`:''}</div>`:''}</td>

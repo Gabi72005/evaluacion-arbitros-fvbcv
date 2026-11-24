@@ -400,7 +400,7 @@ async function handleLogPdf(request, env) {
   const body = await parseJsonBody(request);
   if (!body) return json({ ok: false }, 400, env);
 
-  const { token, aspirant, role, examiner, nEval, fecha } = body;
+  const { token, aspirant, role, examiner, nEval, fecha, passed } = body;
   if (!token) return json({ ok: false }, 200, env);
 
   // Validate fields
@@ -427,9 +427,11 @@ async function handleLogPdf(request, env) {
   // Store normalized nEval as integer
   const nEvalNorm = (nEval !== null && nEval !== undefined) ? Number(nEval) : null;
 
+  const passedNorm = passed === true ? true : passed === false ? false : null;
+
   await env.EVAL_KV.put(`l:${Date.now()}-${randomHex(4)}`, JSON.stringify({
     type: 'pdf', label: session.label, deviceId: session.deviceId,
-    aspirant, role, examiner, nEval: nEvalNorm, fecha, timestamp: nowIso(),
+    aspirant, role, examiner, nEval: nEvalNorm, fecha, passed: passedNorm, timestamp: nowIso(),
   }), { expirationTtl: 365 * 86400 });
 
   pruneLogIfNeeded(env);
