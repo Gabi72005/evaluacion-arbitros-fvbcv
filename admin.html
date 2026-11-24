@@ -70,6 +70,9 @@ const WORKER_URL = 'https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
 let secret = sessionStorage.getItem('_adm') || '';
 let tab = 'arbitros';
 let data = null;
+try { const c = sessionStorage.getItem('_adm_cache'); if(c) data = JSON.parse(c); } catch{}
+
+function saveCache(d){ try{ sessionStorage.setItem('_adm_cache', JSON.stringify(d)); }catch{} }
 
 const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -315,10 +318,16 @@ async function doReactivate(codeHash,label){
 
 async function loadData(){
   try{
-    const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+secret}});
-    if(r.ok){data=await r.json();render();}
-    else if(r.status===401){sessionStorage.removeItem('_adm');secret='';render();}
-  }catch(e){console.error(e);}
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+secret},signal:ctrl.signal});
+    clearTimeout(tid);
+    if(r.ok){data=await r.json();saveCache(data);render();}
+    else if(r.status===401){sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();}
+  }catch(e){
+    if(e&&e.name==='AbortError'&&data){render();}
+    else console.error(e);
+  }
 }
 
 function downloadCodespdf(codes){
