@@ -239,7 +239,7 @@ label.f{
 <script>
 const WORKER_URL = 'https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
 const APP_URL    = 'https://evaluacion-arbitros-fvbcv.pages.dev'; // URL de la app del árbitro
-const GUIDE_URL  = ''; // URL del PDF guía — déjalo vacío si aún no tienes el PDF
+const GUIDE_URL  = 'https://evaluacion-arbitros-fvbcv.pages.dev/guia-uso-arbitros-fvbcv.pdf';
 // secret holds a session token (never the password)
 let secret = sessionStorage.getItem('_adm') || '';
 let tab = 'arbitros';
@@ -334,6 +334,7 @@ function appHtml(){
     <img src="fvbcv-logo.png" alt="FVBCV" style="height:36px;width:36px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px">
     <h1>Panel Admin<span class="sub">Evaluación Árbitros FVBCV</span></h1>
     <button class="iconbtn" id="refreshBtn" title="Actualizar">↺</button>
+    <a class="iconbtn" href="guia-administracion-fvbcv.pdf" download style="margin-left:4px;text-decoration:none;display:inline-flex;align-items:center;gap:5px" title="Descargar guía de administración"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Guía</a>
     <button class="iconbtn" id="logoutBtn" style="margin-left:4px">Salir</button>
   </header>
   <div class="wrap">
