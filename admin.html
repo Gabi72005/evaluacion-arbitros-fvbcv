@@ -471,7 +471,7 @@ function tabActividad(logs){
   </div>
   <div class="card" style="padding:0;overflow:hidden">
   ${slice.length?`<table>
-    <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th></tr></thead>
+    <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th><th style="width:36px"></th></tr></thead>
     <tbody>${slice.map(l=>`<tr>
       <td>${l.type==='pdf'?'<span class="pill ok">PDF</span>':'<span class="pill na">Login</span>'}</td>
       <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">${esc(l.aspirant||'')} · ${fmtRole(l.role)}${l.nEval?' · Eval. '+esc(String(l.nEval))+'ª':''}${l.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px 2px 5px">Supera</span>':l.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px 2px 5px">No supera</span>':''}</div>`:''}
@@ -479,6 +479,7 @@ function tabActividad(logs){
       <td class="hide">${l.type==='pdf'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
           ${l.type==='login'?`<div class="ts">${[l.city,l.country].filter(Boolean).join(', ')||'—'}${l.deviceInfo?` · ${esc(l.deviceInfo.tz||'')}`:''}</div>`:''}</td>
       <td><span class="ts">${fmtDate(l.timestamp)}</span></td>
+      <td style="text-align:center">${l._key?`<button onclick="logDelete('${esc(l._key)}')" class="iconbtn" title="Eliminar registro" style="color:var(--ko);opacity:.7;font-size:15px;padding:4px 6px">🗑</button>`:''}</td>
     </tr>`).join('')}</tbody>
   </table>`:`<div class="empty">${isFiltered?'Sin resultados para este filtro.':'Sin actividad todavía.'}</div>`}
   </div>
@@ -588,6 +589,19 @@ async function fbDelete(key){
     });
     feedbacks=feedbacks.filter(f=>f._key!==key);
     render();
+  }catch{}
+}
+
+async function logDelete(key){
+  if(!confirm('¿Eliminar este registro de actividad?')) return;
+  try{
+    await fetch(WORKER_URL+'/admin/log/delete',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
+      body:JSON.stringify({key})
+    });
+    data.logs=(data.logs||[]).filter(l=>l._key!==key);
+    renderActTab();
   }catch{}
 }
 
