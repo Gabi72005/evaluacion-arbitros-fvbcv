@@ -285,6 +285,26 @@ async function handleValidate(request, env) {
       { 'Retry-After': String(rlDev.retryAfter) });
   }
 
+  // Master code: stored as MASTER_CODE secret, never binds to a device
+  if (env.MASTER_CODE && env.SESSION_SECRET) {
+    const masterNorm = String(env.MASTER_CODE).trim().toUpperCase().replace(/[^0-9A-F]/g, '');
+    const inputHmac  = await hmacSha256Hex(env.SESSION_SECRET, normalized);
+    const masterHmac = await hmacSha256Hex(env.SESSION_SECRET, masterNorm);
+    if (timingSafeEqual(inputHmac, masterHmac)) {
+      const token = randomHex(32);
+      const ts = nowIso();
+      await env.EVAL_KV.put(`s:${token}`, JSON.stringify({
+        masterSession: true, label: 'Demo', deviceId, createdAt: ts, lastSeen: ts,
+      }), { expirationTtl: 8 * 3600 });
+      await env.EVAL_KV.put(`l:${Date.now()}-${randomHex(4)}`, JSON.stringify({
+        type: 'master_login', label: 'Demo', deviceId, deviceInfo, timestamp: ts,
+        country: request.cf?.country || null, city: request.cf?.city || null,
+      }), { expirationTtl: 365 * 86400 });
+      pruneLogIfNeeded(env);
+      return json({ ok: true, token, label: 'Demo' }, 200, env);
+    }
+  }
+
   const hash = await sha256hex(normalized);
   const record = await env.EVAL_KV.get(`c:${hash}`, 'json');
 
@@ -354,6 +374,12 @@ async function handleVerify(request, env) {
   const session = await env.EVAL_KV.get(`s:${token}`, 'json');
   if (!session) return json({ ok: false }, 200, env);
 
+  if (session.masterSession) {
+    session.lastSeen = nowIso();
+    await env.EVAL_KV.put(`s:${token}`, JSON.stringify(session), { expirationTtl: 8 * 3600 });
+    return json({ ok: true, label: session.label }, 200, env);
+  }
+
   const record = await env.EVAL_KV.get(`c:${session.codeHash}`, 'json');
   if (!record || record.status === 'revoked') return json({ ok: false }, 200, env);
 
@@ -386,6 +412,10 @@ async function handleLogPdf(request, env) {
 
   const session = await env.EVAL_KV.get(`s:${token}`, 'json');
   if (!session) return json({ ok: false }, 200, env);
+  if (!session.masterSession) {
+    const rec = await env.EVAL_KV.get(`c:${session.codeHash}`, 'json');
+    if (!rec || rec.status === 'revoked') return json({ ok: false }, 200, env);
+  }
 
   // Store normalized nEval as integer
   const nEvalNorm = (nEval !== null && nEval !== undefined) ? Number(nEval) : null;
