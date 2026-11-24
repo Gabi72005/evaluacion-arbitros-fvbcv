@@ -449,10 +449,14 @@ function showMsgModal(c){
       </div>
     </div>
     <div class="modal-bd">
-      <textarea id="msgTxt" readonly style="width:100%;min-height:200px;border:1.5px solid var(--line);border-radius:8px;padding:12px;font-size:13px;line-height:1.5;resize:vertical;background:#f8fafc">${esc(msg)}</textarea>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn pri" id="msgCopy" style="flex:1">Copiar mensaje</button>
-        <button class="btn sec" id="msgClose">Cerrar</button>
+      <textarea id="msgTxt" readonly style="width:100%;min-height:180px;border:1.5px solid var(--line);border-radius:8px;padding:12px;font-size:13px;line-height:1.5;resize:vertical;background:#f8fafc">${esc(msg)}</textarea>
+      <div class="stack" style="margin-top:12px">
+        <button class="btn pri" id="msgCopy" style="justify-content:center">Copiar mensaje</button>
+        <div style="display:flex;gap:8px">
+          <a class="btn sec" id="msgWa" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" style="flex:1;justify-content:center;text-decoration:none">WhatsApp</a>
+          <a class="btn sec" id="msgMail" href="mailto:?subject=${encodeURIComponent('Acceso a la app de evaluación de árbitros FVBCV')}&body=${encodeURIComponent(msg)}" style="flex:1;justify-content:center;text-decoration:none">Correo</a>
+        </div>
+        <button class="btn sec" id="msgClose" style="justify-content:center">Cerrar</button>
       </div>
     </div>
   </div></div>`;
@@ -462,7 +466,7 @@ function showMsgModal(c){
     try{
       await navigator.clipboard.writeText(msg);
       const btn=document.getElementById('msgCopy');
-      btn.textContent='Copiado';btn.style.background='var(--ok)';
+      btn.textContent='¡Copiado!';btn.style.background='var(--ok)';
       setTimeout(()=>{if(btn){btn.textContent='Copiar mensaje';btn.style.background='';}},2000);
     }catch{
       document.getElementById('msgTxt').select();
