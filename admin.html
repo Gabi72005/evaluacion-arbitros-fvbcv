@@ -163,7 +163,7 @@ function appHtml(){
   <header>
     <img src="fvbcv-logo.png" alt="FVBCV" style="height:36px;width:36px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px">
     <h1>Panel Admin<span class="sub">Evaluación Árbitros FVBCV</span></h1>
-    <button class="iconbtn" id="refreshBtn">↻</button>
+    <button class="iconbtn" id="refreshBtn" title="Actualizar">↺</button>
     <button class="iconbtn" id="logoutBtn" style="margin-left:4px">Salir</button>
   </header>
   <div class="wrap">
@@ -188,9 +188,9 @@ function appHtml(){
 function tabArbitros(codes){
   const sorted=[...codes].sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
   return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-    <input class="t" id="arbSearch" placeholder="🔍 Buscar árbitro…" oninput="filterRows('arbSearch','arbTbody')" style="flex:1;min-width:160px;max-width:320px;margin:0">
-    <button class="btn sec" id="pdfBtn">⬇ Descargar PDF</button>
-    <button class="btn pri" id="addBtn">＋ Añadir árbitro</button>
+    <input class="t" id="arbSearch" placeholder="Buscar árbitro..." oninput="filterRows('arbSearch','arbTbody')" style="flex:1;min-width:160px;max-width:320px;margin:0">
+    <button class="btn sec" id="pdfBtn">Descargar PDF</button>
+    <button class="btn pri" id="addBtn">+ Añadir árbitro</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
   ${sorted.length?`<table>
@@ -218,13 +218,13 @@ function tabArbitros(codes){
 
 function tabActividad(logs){
   return `<div style="margin-bottom:10px">
-    <input class="t" id="actSearch" placeholder="🔍 Buscar árbitro…" oninput="filterRows('actSearch','actTbody')" style="max-width:320px;margin:0">
+    <input class="t" id="actSearch" placeholder="Buscar árbitro..." oninput="filterRows('actSearch','actTbody')" style="max-width:320px;margin:0">
   </div>
   <div class="card" style="padding:0;overflow:hidden">
   ${logs.length?`<table>
     <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th></tr></thead>
     <tbody id="actTbody">${logs.map(l=>`<tr>
-      <td>${l.type==='pdf'?'<span class="pill ok">📄 PDF</span>':'<span class="pill na">🔑 Login</span>'}</td>
+      <td>${l.type==='pdf'?'<span class="pill ok">PDF</span>':'<span class="pill na">Login</span>'}</td>
       <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+esc(String(l.nEval))+'ª':''}</div>`:''}
           ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
       <td class="hide">${l.type==='pdf'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
@@ -240,7 +240,7 @@ function tabFeedback(items){
   return `<div class="card" style="padding:0;overflow:hidden">
   ${items.map(f=>{
     const key=esc(f._key||'');
-    const typePill=f.type==='queja'?'<span class="pill ko">⚠ Queja</span>':'<span class="pill ok">💡 Sugerencia</span>';
+    const typePill=f.type==='queja'?'<span class="pill ko">Queja</span>':'<span class="pill ok">Sugerencia</span>';
     return `<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -249,16 +249,16 @@ function tabFeedback(items){
         </div>
         <div style="font-size:14px;white-space:pre-wrap;word-break:break-word">${esc(f.message||'')}</div>
       </div>
-      <button onclick="fbDelete('${key}')" class="btn dan" style="flex:none;font-size:12px;padding:5px 10px" title="Eliminar">🗑 Borrar</button>
+      <button onclick="fbDelete('${key}')" class="btn dan" style="flex:none;font-size:12px;padding:5px 10px" title="Eliminar">Borrar</button>
     </div>`;
   }).join('')}
   </div>`;
 }
 
 function statusPill(s){
-  if(s==='active')  return '<span class="pill ok">✓ Activo</span>';
-  if(s==='pending') return '<span class="pill na">⏳ Sin activar</span>';
-  if(s==='revoked') return '<span class="pill ko">✗ Revocado</span>';
+  if(s==='active')  return '<span class="pill ok">Activo</span>';
+  if(s==='pending') return '<span class="pill na">Sin activar</span>';
+  if(s==='revoked') return '<span class="pill ko">Revocado</span>';
   return `<span class="pill na">${esc(s)}</span>`;
 }
 
@@ -274,7 +274,7 @@ function showMsgModal(c){
     <p style="font-size:13px;color:var(--dim);margin:0 0 12px">Copia y pega en WhatsApp, email o donde prefieras.</p>
     <textarea id="msgTxt" readonly style="width:100%;min-height:200px;border:1.5px solid var(--line);border-radius:10px;padding:12px;font:inherit;font-size:13px;resize:vertical;box-sizing:border-box;background:#f7f8fc">${esc(msg)}</textarea>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn pri" id="msgCopy" style="flex:1">📋 Copiar mensaje</button>
+      <button class="btn pri" id="msgCopy" style="flex:1">Copiar mensaje</button>
       <button class="btn sec" id="msgClose">Cerrar</button>
     </div>
   </div></div>`;
@@ -284,8 +284,8 @@ function showMsgModal(c){
     try{
       await navigator.clipboard.writeText(msg);
       const btn=document.getElementById('msgCopy');
-      btn.textContent='✓ Copiado';btn.style.background='var(--ok)';
-      setTimeout(()=>{if(btn){btn.textContent='📋 Copiar mensaje';btn.style.background='';}},2000);
+      btn.textContent='Copiado';btn.style.background='var(--ok)';
+      setTimeout(()=>{if(btn){btn.textContent='Copiar mensaje';btn.style.background='';}},2000);
     }catch{
       document.getElementById('msgTxt').select();
       document.execCommand('copy');
@@ -515,7 +515,7 @@ async function downloadCodespdf(codes){
 
     doc.save(`arbitros-fvbcv-${date.replace(/\//g,'-')}.pdf`);
   }finally{
-    if(btn){btn.disabled=false;btn.textContent='⬇ Descargar PDF';}
+    if(btn){btn.disabled=false;btn.textContent='Descargar PDF';}
   }
 }
 

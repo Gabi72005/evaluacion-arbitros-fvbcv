@@ -302,7 +302,7 @@ function renderHome(){
       <input class="t" id="exName" placeholder="Tu nombre y apellidos" value="${esc(mem.examiner)}" autocomplete="name">
       <div class="hint">Se guarda en este móvil y aparece en todos los PDF.</div>
     </div>
-    <button class="btn pri" id="newBtn">＋ Nueva evaluación</button>
+    <button class="btn pri" id="newBtn">+ Nueva evaluación</button>
     <div class="card" style="margin-top:14px">
       <h2>Historial</h2>
       ${list.length?`<ul class="hist">${list.map(e=>{
@@ -312,7 +312,7 @@ function renderHome(){
         <div class="ds">${e.role?ROLES[e.role].short:'Sin rol'}${e.nEval?' · '+esc(ordinal(e.nEval))+' eval.':''} · ${esc(fmtDate(e.fecha))}${e.partido?' · '+esc(e.partido):''}</div></div>
         <div class="act"><button data-open="${e.id}">${e.status==='done'?'Ver':'Seguir'}</button>
         ${e.status==='done'?`<button data-pdf="${e.id}" title="PDF">PDF</button>`:''}
-        <button data-del="${e.id}" aria-label="Borrar">🗑</button></div></li>`}).join('')}</ul>`
+        <button data-del="${e.id}" aria-label="Borrar">Borrar</button></div></li>`}).join('')}</ul>`
         :'<div class="empty">Aún no hay evaluaciones.</div>'}
     </div>
     <div class="hint" style="text-align:center">Los datos se guardan solo en este dispositivo.</div>
@@ -425,7 +425,7 @@ function viewFinal(ev,r,g){
     <textarea class="t" data-f="comments" rows="12" placeholder="Valoración general del partido, puntos fuertes, aspectos a mejorar, recomendación…">${esc(ev.comments)}</textarea>
   </div>
   <div class="stack">
-    <button class="btn pri" id="genPdf">⬇ ${lastPdf&&lastPdf.id===ev.id?'Volver a descargar PDF':'Descargar PDF'+(ev.status==='done'?'':' y finalizar')}</button>
+    <button class="btn pri" id="genPdf">${lastPdf&&lastPdf.id===ev.id?'Volver a descargar PDF':'Descargar PDF'+(ev.status==='done'?'':' y finalizar')}</button>
     ${lastPdf&&lastPdf.id===ev.id&&!dlNs?(canShareFile(lastPdf.file)
       ?'<button class="btn sec" id="sharePdf">↗ Compartir PDF (WhatsApp, correo…)</button>'
       :'<div class="hint" style="text-align:center">PDF descargado. Para enviarlo, ábrelo desde Descargas y compártelo.</div>'):''}
