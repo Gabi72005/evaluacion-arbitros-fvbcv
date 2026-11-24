@@ -466,7 +466,7 @@ async function downloadCodespdf(codes){
 }
 
 // B1: if session token exists but data not in cache, trigger load immediately
-render(); if(secret && !data) loadData();
+render(); if(secret) loadData();
 </script>
 </body>
 </html>
