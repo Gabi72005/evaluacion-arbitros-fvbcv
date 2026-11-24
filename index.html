@@ -210,7 +210,7 @@ function renderLogin(err){
     try{
       const r=await fetch(WORKER_URL+'/auth/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,deviceId:getDeviceId(),deviceInfo:getDeviceInfo()})});
       const d=await r.json();
-      if(d.ok){localStorage.setItem('_session',d.token);if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}render();}
+      if(d.ok){localStorage.setItem('_session',d.token);if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}render();}
       else{errEl.textContent=d.error||'Código incorrecto';btn.disabled=false;btn.textContent='Entrar';}
     }catch(e){errEl.textContent='Error de conexión. Comprueba internet.';btn.disabled=false;btn.textContent='Entrar';}
   };
@@ -228,6 +228,7 @@ async function initApp(){
       const d=await r.json();
       if(d.ok){
         try{localStorage.setItem('_lastVerified',String(Date.now()));}catch{}
+        if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');
         if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}
         render();return;
       }
@@ -240,9 +241,20 @@ async function initApp(){
         }catch{}
       }
     }
-    localStorage.removeItem('_session');
+    localStorage.removeItem('_session');localStorage.removeItem('_master');
   }
   renderLogin();
+}
+function exitMaster(){
+  try{localStorage.removeItem('_session');localStorage.removeItem('_master');}catch{}
+  renderLogin();
+}
+function masterBanner(){
+  if(!localStorage.getItem('_master')) return '';
+  return `<div style="background:#fef3c7;border-bottom:1px solid #f59e0b;padding:9px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:#78350f;flex-shrink:0">
+    <span style="flex:1"><strong>Modo de prueba</strong> — Sesión de demostración, sin datos reales.</span>
+    <button onclick="exitMaster()" style="border:0;background:#92400e;color:#fff;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Salir</button>
+  </div>`;
 }
 
 /* ---------- Almacenamiento ---------- */
@@ -296,6 +308,7 @@ function renderHome(){
   const list=[...mem.evals].sort((a,b)=>b.updated-a.updated);
   $app.innerHTML=`
   <header class="top"><img src="fvbcv-logo.png" alt="FVBCV" style="height:34px;width:34px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px"><h1>Evaluación de árbitros<span class="sub">FVBCV · Plantilla examinador</span></h1></header>
+  ${masterBanner()}
   <main>
     <div class="card">
       <h2>Examinador</h2>
@@ -339,6 +352,7 @@ function renderEval(){
   $app.innerHTML=`
   <header class="top"><button class="iconbtn" id="back" aria-label="Volver">‹</button>
     <h1>${esc(ev.aspirant||'Nueva evaluación')}<span class="sub">${r?r.name:'Elige el rol a evaluar'}${ev.status==='draft'?' · borrador guardado':''}</span></h1></header>
+  ${masterBanner()}
   <main id="main">${body}</main>
   <nav class="tabs"><div class="in">${TABS.map(([k,l,ic])=>{
     let badge=`<span class="ic">${ic}</span>`;

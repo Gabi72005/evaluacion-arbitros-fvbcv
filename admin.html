@@ -6,102 +6,230 @@
 <title>Admin · Evaluación Árbitros FVBCV</title>
 <link rel="icon" href="fvbcv-logo.png" type="image/png">
 <style>
+/* ── Design tokens ───────────────────────────────────────── */
 :root{
-  --blue:#1E20E8; --blue-d:#1515C8; --blue-l:#EEEEFF;
-  --ok:#17844a; --ok-l:#e3f4ea; --ko:#c62f2f; --ko-l:#fbe7e7;
-  --ink:#16202c; --mute:#5d6b7a; --line:#dde3ea; --bg:#f3f5f8; --card:#fff;
-  --orange:#F08500; --gold:#FFD000;
+  --blue:#1E20E8; --blue-d:#1515C8; --blue-l:#EEF0FF;
+  --ok:#166534;   --ok-l:#dcfce7;
+  --ko:#b91c1c;   --ko-l:#fee2e2;
+  --warn:#92400e; --warn-l:#fef3c7;
+  --ink:#0f172a;  --ink2:#374151; --mute:#64748b;
+  --line:#e2e8f0; --bg:#eef0f6;   --card:#fff;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-button,input{font:inherit;color:inherit}button{cursor:pointer}
-.app{max-width:860px;margin:0 auto;min-height:100vh;padding-bottom:40px}
-header{background:var(--blue);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;margin-bottom:18px}
-header h1{margin:0;font-size:17px;font-weight:700;flex:1}
-header .sub{font-size:11px;opacity:.8;font-weight:400;display:block}
-.iconbtn{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:9px;height:36px;padding:0 12px;font-size:13px;font-weight:600}
-.wrap{padding:0 14px}
-.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid var(--line);box-shadow:0 1px 2px rgba(16,32,44,.06)}
-input.t{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;font-size:15px}
-input.t:focus{outline:none;border-color:var(--blue)}
-.btn{border:0;border-radius:11px;padding:10px 16px;font-weight:650;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.btn.pri{background:var(--blue);color:#fff}.btn.pri:active{background:var(--blue-d)}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.app{max-width:900px;margin:0 auto;min-height:100vh;padding-bottom:48px}
+.wrap{padding:0 18px}
+
+/* ── Header (Gestalt: Região Comum — logo+título como unidade) */
+header{
+  background:var(--blue);color:#fff;
+  padding:0 18px;height:56px;
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:22px;
+  box-shadow:0 2px 10px rgba(30,32,232,.28);
+}
+header h1{margin:0;font-size:16px;font-weight:700;flex:1;line-height:1.25}
+header .sub{font-size:11px;opacity:.8;font-weight:400;display:block;margin-top:1px;letter-spacing:.01em}
+.iconbtn{
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);
+  color:#fff;border-radius:7px;height:32px;padding:0 11px;
+  font-size:12px;font-weight:600;transition:background .15s
+}
+.iconbtn:hover{background:rgba(255,255,255,.26)}
+
+/* ── Card ───────────────────────────────────────────────── */
+.card{
+  background:var(--card);border-radius:12px;padding:16px;
+  margin-bottom:14px;border:1px solid var(--line);
+  box-shadow:0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.03)
+}
+
+/* ── Inputs ─────────────────────────────────────────────── */
+input.t{
+  width:100%;border:1.5px solid var(--line);border-radius:8px;
+  padding:10px 12px;background:#fff;font-size:14px;
+  transition:border-color .15s
+}
+input.t:focus{outline:none;border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(30,32,232,.09)}
+
+/* ── Buttons ────────────────────────────────────────────── */
+.btn{
+  border:0;border-radius:8px;padding:9px 15px;
+  font-weight:600;font-size:13px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:filter .12s
+}
+.btn:active{filter:brightness(.9)}
+.btn.pri{background:var(--blue);color:#fff}
+.btn.pri:hover{background:var(--blue-d)}
 .btn.dan{background:var(--ko);color:#fff}
 .btn.ok2{background:var(--ok);color:#fff}
-.btn.sec{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
-.btn[disabled]{opacity:.5;cursor:default}
-.pill{display:inline-flex;align-items:center;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap}
-.pill.ok{background:var(--ok-l);color:var(--ok)}.pill.ko{background:var(--ko-l);color:var(--ko)}.pill.na{background:#eceff3;color:var(--mute)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
-.stat .n{font-size:26px;font-weight:800;color:var(--blue);line-height:1}
-.stat .l{font-size:11px;color:var(--mute);margin-top:3px}
+.btn.sec{background:#fff;border:1.5px solid var(--line);color:var(--ink2)}
+.btn.sec:hover{background:#f8fafc;border-color:#94a3b8}
+.btn[disabled]{opacity:.4;cursor:default;pointer-events:none}
+
+/* ── Status pills — Gestalt: Similitud (•color = estado) ── */
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;border-radius:6px;
+  padding:3px 8px 3px 6px;white-space:nowrap
+}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;flex:none}
+.pill.ok{background:var(--ok-l);color:var(--ok)}.pill.ok::before{background:var(--ok)}
+.pill.ko{background:var(--ko-l);color:var(--ko)}.pill.ko::before{background:var(--ko)}
+.pill.na{background:#f1f5f9;color:var(--mute)}.pill.na::before{background:#94a3b8}
+
+/* ── Stats — Gestalt: Proximidad + Continuidad (top accent) */
+.stats{
+  display:grid;grid-template-columns:repeat(6,1fr);
+  gap:8px;margin-bottom:22px
+}
+.stat{
+  background:var(--card);border-radius:10px;
+  padding:14px 8px 12px;text-align:center;
+  border:1px solid var(--line);border-top:3px solid var(--line);
+  transition:box-shadow .15s
+}
+.stat .n{font-size:24px;font-weight:800;line-height:1;margin-bottom:5px}
+.stat .l{font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--mute)}
+
+/* ── Table — Gestalt: Figura/Fondo (cabecera diferenciada) ── */
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;color:var(--mute);font-weight:700;border-bottom:1.5px solid var(--line);white-space:nowrap}
-td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+thead th{
+  text-align:left;padding:10px 12px;
+  font-size:10px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--mute);font-weight:700;
+  background:#f8fafc;
+  border-bottom:1.5px solid var(--line);white-space:nowrap
+}
+tbody tr{transition:background .1s}
+tbody tr:hover{background:#f8fafc}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
 tr:last-child td{border-bottom:0}
-.code{font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.08em;color:#7A3800;background:#FFF0D0;border-radius:7px;padding:3px 8px}
+
+/* Code badge — identificador único, legibilidad primero */
+.code{
+  font-family:ui-monospace,"SF Mono","Fira Code",Consolas,monospace;
+  font-size:13px;font-weight:700;letter-spacing:.06em;
+  color:var(--warn);background:var(--warn-l);
+  border-radius:5px;padding:3px 7px
+}
 .ua{font-size:11px;color:var(--mute);margin-top:2px}
-.ts{font-size:12px;color:var(--mute)}
-.empty{color:var(--mute);font-size:14px;text-align:center;padding:20px}
-.modal-bg{position:fixed;inset:0;background:rgba(10,20,30,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.modal-sheet{background:#fff;width:100%;max-width:500px;border-radius:18px 18px 0 0;padding:20px 18px calc(28px + env(safe-area-inset-bottom,0px))}
-.modal-sheet h3{margin:0 0 6px;font-size:18px}
-.modal-sheet p{margin:0 0 12px;color:var(--mute);font-size:14px}
-.code-box{background:var(--blue-l);border:2px solid var(--blue);border-radius:12px;padding:16px;text-align:center;margin:12px 0;font-size:30px;font-weight:800;letter-spacing:.18em;color:var(--blue-d);font-family:monospace}
-.hint{font-size:13px;color:var(--mute);margin-top:5px}
-.stack>*+*{margin-top:8px}
-.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1.5px solid var(--line)}
-.tab{border:0;background:transparent;padding:9px 14px;font-size:14px;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
+.ts{font-size:11px;color:var(--mute)}
+.empty{color:var(--mute);font-size:14px;text-align:center;padding:32px 20px;line-height:1.6}
+
+/* ── Tabs ───────────────────────────────────────────────── */
+.tabs{display:flex;margin-bottom:16px;border-bottom:1.5px solid var(--line)}
+.tab{
+  border:0;background:transparent;padding:10px 16px;
+  font-size:13px;font-weight:600;color:var(--mute);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1.5px;
+  transition:color .15s
+}
 .tab.on{color:var(--blue);border-bottom-color:var(--blue)}
-.login-wrap{display:grid;place-items:center;min-height:100vh;padding:14px}
-.login-card{background:var(--card);border-radius:16px;padding:22px;width:100%;max-width:340px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(16,32,44,.08)}
-.brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-.brand img{width:48px;height:48px;object-fit:contain;flex:none}
-.brand b{display:block;font-size:16px;color:var(--blue)}.brand span{font-size:12px;color:var(--mute)}
-label.f{display:block;font-size:11px;color:var(--mute);margin:10px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.acts{display:flex;gap:6px;flex-wrap:wrap}
+.tab:hover:not(.on){color:var(--ink2)}
+
+/* ── Modal — sheet desde abajo, región claramente separada ─ */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(15,23,42,.52);
+  z-index:20;display:flex;align-items:flex-end;justify-content:center
+}
+.modal-sheet{
+  background:#fff;width:100%;max-width:520px;
+  border-radius:16px 16px 0 0;overflow:hidden;
+  box-shadow:0 -4px 28px rgba(0,0,0,.14)
+}
+.modal-hd{
+  padding:18px 20px 14px;border-bottom:1px solid var(--line);
+  display:flex;align-items:flex-start;gap:12px
+}
+.modal-hd .modal-ttl{flex:1}
+.modal-hd h3{margin:0;font-size:17px;font-weight:700;line-height:1.3}
+.modal-hd .modal-sub{font-size:13px;color:var(--mute);margin-top:3px}
+.modal-bd{padding:16px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.code-box{
+  background:var(--blue-l);border:1.5px solid #c7cbf8;border-radius:10px;
+  padding:18px;text-align:center;margin:12px 0;
+  font:800 30px/1 ui-monospace,"SF Mono",monospace;
+  letter-spacing:.16em;color:var(--blue-d)
+}
+.hint{font-size:12px;color:var(--mute);margin-top:5px}
+.stack>*+*{margin-top:8px}
+
+/* ── Login ──────────────────────────────────────────────── */
+.login-wrap{display:grid;place-items:center;min-height:100vh;padding:16px}
+.login-card{
+  background:var(--card);border-radius:16px;padding:28px 24px;
+  width:100%;max-width:360px;
+  border:1px solid var(--line);box-shadow:0 4px 24px rgba(0,0,0,.08)
+}
+.brand{
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--line)
+}
+.brand img{width:48px;height:48px;object-fit:contain;flex:none;border-radius:8px}
+.brand b{display:block;font-size:17px;font-weight:700;color:var(--blue)}
+.brand span{font-size:12px;color:var(--mute);display:block;margin-top:2px}
+label.f{
+  display:block;font-size:11px;color:var(--mute);
+  margin:14px 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em
+}
+
+/* ── Actions / Toolbar ──────────────────────────────────── */
+.acts{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+
+/* ── Responsive breakpoint 600px ───────────────────────── */
 @media(max-width:600px){
   .hide{display:none}
-  .wrap{padding:0 10px}
-  header{padding:10px 12px;gap:8px}
-  header h1{font-size:15px}
-  .iconbtn{height:34px;padding:0 10px;font-size:12px}
-
-  /* Stats */
-  .stats{grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
-  .stat{padding:9px 6px}
+  .wrap{padding:0 11px}
+  header{padding:0 12px;height:50px;gap:8px;margin-bottom:14px}
+  header h1{font-size:14px}
+  .iconbtn{height:30px;padding:0 9px;font-size:11px}
+  .stats{grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+  .stat{padding:11px 6px 9px}
   .stat .n{font-size:20px}
-  .stat .l{font-size:10px}
-
-  /* Tabs */
-  .tab{padding:8px 10px;font-size:13px}
-
-  /* Toolbar */
-  .toolbar{flex-direction:column!important;align-items:stretch!important;gap:6px!important}
+  .stat .l{font-size:9px}
+  .tabs .tab{padding:9px 11px;font-size:12px}
+  .toolbar{flex-direction:column;align-items:stretch;gap:6px}
   .toolbar .t{max-width:100%!important;width:100%}
   .toolbar-btns{display:flex;gap:8px}
-  .toolbar-btns .btn{flex:1;justify-content:center;font-size:13px}
-
-  /* Table defaults */
-  table{font-size:13px}
-  td,th{padding:8px 6px}
-  .code{font-size:12px;letter-spacing:0;padding:2px 5px}
+  .toolbar-btns .btn{flex:1;font-size:12px}
+  table{font-size:12px}
+  td,th{padding:9px 7px}
+  .code{font-size:11px;letter-spacing:0;padding:2px 5px}
   .acts{flex-direction:column;gap:4px;align-items:stretch}
-  .acts .btn{padding:7px 8px;font-size:11px;justify-content:center}
+  .acts .btn{font-size:11px;padding:7px 8px}
   .acts .btn svg{margin:0 auto}
+  .modal-hd{padding:14px 16px 12px}
+  .modal-bd{padding:14px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
-/* Card layout for arbitros table on narrow screens */
+/* ── Card layout arbitros <500px ────────────────────────── */
 @media(max-width:500px){
   .arb-table thead{display:none}
   .arb-table,.arb-table tbody{display:block}
-  .arb-table tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto auto;padding:12px;border-bottom:1px solid var(--line)}
+  .arb-table tbody tr{
+    display:grid;grid-template-columns:1fr auto;
+    grid-template-rows:auto auto auto;
+    padding:13px 12px;border-bottom:1px solid var(--line)
+  }
   .arb-table tbody td{border:0;padding:2px 0;display:flex;align-items:center}
   .arb-table tbody td:nth-child(1){grid-column:1;grid-row:1;font-size:14px}
-  .arb-table tbody td:nth-child(2){grid-column:1;grid-row:2}
-  .arb-table tbody td:nth-child(3){grid-column:1;grid-row:3}
+  .arb-table tbody td:nth-child(2){grid-column:1;grid-row:2;margin-top:3px}
+  .arb-table tbody td:nth-child(3){grid-column:1;grid-row:3;margin-top:4px}
   .arb-table tbody td.hide{display:none!important}
-  .arb-table tbody td:last-child{grid-column:2;grid-row:1/span 3;flex-direction:column;justify-content:center;gap:5px;padding-left:10px;border:0}
+  .arb-table tbody td:last-child{
+    grid-column:2;grid-row:1/span 3;
+    flex-direction:column;justify-content:center;
+    gap:5px;padding-left:12px;border:0
+  }
   .arb-table tbody td:last-child .btn{padding:8px 10px;font-size:11px;white-space:nowrap}
 }
 </style>
@@ -140,11 +268,11 @@ function fmtDate(iso){
 
 function parseBrowser(ua){
   if(!ua) return '—';
-  if(/iPhone|iPad/.test(ua)) return '📱 iOS';
-  if(/Android/.test(ua)) return '📱 Android';
-  if(/Windows/.test(ua)) return '💻 Windows';
-  if(/Mac/.test(ua)) return '💻 Mac';
-  return '🖥️ Otro';
+  if(/iPhone|iPad/.test(ua)) return 'iOS';
+  if(/Android/.test(ua)) return 'Android';
+  if(/Windows/.test(ua)) return 'Windows';
+  if(/Mac/.test(ua)) return 'Mac';
+  return 'Web';
 }
 
 function render(){
@@ -210,12 +338,12 @@ function appHtml(){
   </header>
   <div class="wrap">
     <div class="stats">
-      <div class="stat"><div class="n">${codes.length}</div><div class="l">Árbitros</div></div>
-      <div class="stat"><div class="n" style="color:var(--ok)">${active}</div><div class="l">Activos</div></div>
-      <div class="stat"><div class="n" style="color:var(--orange)">${pending}</div><div class="l">Sin activar</div></div>
-      <div class="stat"><div class="n" style="color:var(--ko)">${revoked}</div><div class="l">Revocados</div></div>
-      <div class="stat"><div class="n">${pdfsHoy}</div><div class="l">PDFs hoy</div></div>
-      <div class="stat"><div class="n" style="color:var(--blue)">${feedbacks.length}</div><div class="l">Feedback</div></div>
+      <div class="stat" style="border-top-color:var(--blue)"><div class="n" style="color:var(--blue)">${codes.length}</div><div class="l">Árbitros</div></div>
+      <div class="stat" style="border-top-color:var(--ok)"><div class="n" style="color:var(--ok)">${active}</div><div class="l">Activos</div></div>
+      <div class="stat" style="border-top-color:#d97706"><div class="n" style="color:#d97706">${pending}</div><div class="l">Sin activar</div></div>
+      <div class="stat" style="border-top-color:var(--ko)"><div class="n" style="color:var(--ko)">${revoked}</div><div class="l">Revocados</div></div>
+      <div class="stat" style="border-top-color:#64748b"><div class="n" style="color:#64748b">${pdfsHoy}</div><div class="l">PDFs hoy</div></div>
+      <div class="stat" style="border-top-color:var(--blue)"><div class="n" style="color:var(--blue)">${fbCount}</div><div class="l">Feedback</div></div>
     </div>
     <div class="tabs">
       <button class="tab ${tab==='arbitros'?'on':''}" data-tab="arbitros">Árbitros</button>
@@ -314,12 +442,18 @@ function showMsgModal(c){
 
   const md=document.getElementById('modal');
   md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet" style="max-width:520px">
-    <h3 style="margin:0 0 4px">Mensaje para ${esc(nombre)}</h3>
-    <p style="font-size:13px;color:var(--dim);margin:0 0 12px">Copia y pega en WhatsApp, email o donde prefieras.</p>
-    <textarea id="msgTxt" readonly style="width:100%;min-height:200px;border:1.5px solid var(--line);border-radius:10px;padding:12px;font:inherit;font-size:13px;resize:vertical;box-sizing:border-box;background:#f7f8fc">${esc(msg)}</textarea>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn pri" id="msgCopy" style="flex:1">Copiar mensaje</button>
-      <button class="btn sec" id="msgClose">Cerrar</button>
+    <div class="modal-hd">
+      <div class="modal-ttl">
+        <h3>Mensaje para ${esc(nombre)}</h3>
+        <div class="modal-sub">Copia y pega en WhatsApp, correo o donde prefieras.</div>
+      </div>
+    </div>
+    <div class="modal-bd">
+      <textarea id="msgTxt" readonly style="width:100%;min-height:200px;border:1.5px solid var(--line);border-radius:8px;padding:12px;font-size:13px;line-height:1.5;resize:vertical;background:#f8fafc">${esc(msg)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn pri" id="msgCopy" style="flex:1">Copiar mensaje</button>
+        <button class="btn sec" id="msgClose">Cerrar</button>
+      </div>
     </div>
   </div></div>`;
   document.getElementById('msgClose').onclick=()=>md.innerHTML='';
@@ -380,15 +514,21 @@ function bindApp(){
 function showAddModal(){
   const md=document.getElementById('modal');
   md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet">
-    <h3>Añadir árbitro</h3>
-    <p>El código se genera a partir del nombre y siempre es el mismo para la misma persona.</p>
-    <label class="f" for="mname">Nombre completo</label>
-    <input class="t" id="mname" placeholder="Nombre y apellidos" autocomplete="off">
-    <div id="mErr" style="color:var(--ko);font-size:13px;margin:6px 0;min-height:16px"></div>
-    <div id="mResult"></div>
-    <div class="stack" style="margin-top:12px">
-      <button class="btn pri" id="mAdd" style="justify-content:center">Generar código</button>
-      <button class="btn sec" id="mClose" style="justify-content:center">Cancelar</button>
+    <div class="modal-hd">
+      <div class="modal-ttl">
+        <h3>Añadir árbitro</h3>
+        <div class="modal-sub">El código se genera a partir del nombre y siempre es el mismo.</div>
+      </div>
+    </div>
+    <div class="modal-bd">
+      <label class="f" for="mname">Nombre completo</label>
+      <input class="t" id="mname" placeholder="Nombre y apellidos" autocomplete="off">
+      <div id="mErr" style="color:var(--ko);font-size:13px;margin:6px 0;min-height:16px"></div>
+      <div id="mResult"></div>
+      <div class="stack" style="margin-top:14px">
+        <button class="btn pri" id="mAdd" style="justify-content:center">Generar código</button>
+        <button class="btn sec" id="mClose" style="justify-content:center">Cancelar</button>
+      </div>
     </div>
   </div></div>`;
 
@@ -439,11 +579,17 @@ function showAddModal(){
 function showRevokeModal(codeHash,label){
   const md=document.getElementById('modal');
   md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet">
-    <h3>Revocar acceso</h3>
-    <p>¿Revocar a <b>${esc(label)}</b>? No podrá entrar a la app. Puedes reactivarlo después.</p>
-    <div class="stack" style="margin-top:12px">
-      <button class="btn dan" id="mOk" style="justify-content:center">Revocar acceso</button>
-      <button class="btn sec" id="mNo" style="justify-content:center">Cancelar</button>
+    <div class="modal-hd">
+      <div class="modal-ttl">
+        <h3>Revocar acceso</h3>
+        <div class="modal-sub">¿Revocar a <strong>${esc(label)}</strong>? No podrá entrar. Puedes reactivarlo después.</div>
+      </div>
+    </div>
+    <div class="modal-bd">
+      <div class="stack">
+        <button class="btn dan" id="mOk" style="justify-content:center">Revocar acceso</button>
+        <button class="btn sec" id="mNo" style="justify-content:center">Cancelar</button>
+      </div>
     </div>
   </div></div>`;
   const close=()=>md.innerHTML='';

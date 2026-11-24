@@ -304,7 +304,7 @@ async function handleValidate(request, env) {
         country: request.cf?.country || null, city: request.cf?.city || null,
       }), { expirationTtl: 365 * 86400 });
       pruneLogIfNeeded(env);
-      return json({ ok: true, token, label: 'Demo' }, 200, env);
+      return json({ ok: true, token, label: 'Demo', masterSession: true }, 200, env);
     }
   }
 
@@ -380,7 +380,7 @@ async function handleVerify(request, env) {
   if (session.masterSession) {
     session.lastSeen = nowIso();
     await env.EVAL_KV.put(`s:${token}`, JSON.stringify(session), { expirationTtl: 8 * 3600 });
-    return json({ ok: true, label: session.label }, 200, env);
+    return json({ ok: true, label: session.label, masterSession: true }, 200, env);
   }
 
   const record = await env.EVAL_KV.get(`c:${session.codeHash}`, 'json');
