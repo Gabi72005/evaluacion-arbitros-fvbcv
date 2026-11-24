@@ -446,7 +446,8 @@ function showMsgModal(c){
   const nombre=c.label||'árbitro';
   const codigo=c.code||'(código no disponible — recarga la página)';
   const guia=GUIDE_URL?`\n\nGuía de uso de la aplicación:\n${GUIDE_URL}`:'';
-  const msg=`Hola ${nombre},\n\nTe informamos de que has sido seleccionado/a como árbitro examinador/a en la FVBCV.\n\nPara acceder a la aplicación de evaluación, utiliza el siguiente código:\n\nCódigo: ${codigo}\n\nAccede desde:\n${APP_URL}${guia}\n\nSi tienes algún problema para acceder, contacta con nosotros.\n\nUn saludo,\nFVBCV`;
+  const enlace=`${APP_URL}/#c=${encodeURIComponent(codigo)}`;
+  const msg=`Hola ${nombre},\n\nTe informamos de que has sido seleccionado/a como árbitro examinador/a en la FVBCV.\n\nPara acceder a la aplicación de evaluación, abre el siguiente enlace — el código ya aparecerá escrito, solo tienes que pulsar Entrar:\n\n${enlace}${guia}\n\nO, si prefieres escribir el código a mano:\n\nCódigo: ${codigo}\nURL: ${APP_URL}\n\nSi tienes algún problema para acceder, contacta con nosotros.\n\nUn saludo,\nFVBCV`;
 
   const md=document.getElementById('modal');
   md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet" style="max-width:520px">

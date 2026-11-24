@@ -216,6 +216,12 @@ function renderLogin(err){
   };
 }
 async function initApp(){
+  // U6: pre-fill code from #c=XXXX-XXXX fragment (never reaches server logs)
+  let _prefillCode=null;
+  try{
+    const m=location.hash.match(/^#c=([A-Z0-9]{4}-?[A-Z0-9]{4})$/i);
+    if(m){_prefillCode=m[1].toUpperCase().replace(/([A-Z0-9]{4})([A-Z0-9]{4})$/,'$1-$2');history.replaceState(null,'',location.pathname);}
+  }catch{}
   const token=localStorage.getItem('_session');
   if(token){
     const $a=document.getElementById('app');
@@ -246,6 +252,7 @@ async function initApp(){
     localStorage.removeItem('_session');localStorage.removeItem('_master');localStorage.removeItem('_session_label');
   }
   renderLogin();
+  if(_prefillCode){const f=document.getElementById('lCode');if(f){f.value=_prefillCode;f.dispatchEvent(new Event('input'));}}
 }
 function exitMaster(){
   stopSessionWatch();
