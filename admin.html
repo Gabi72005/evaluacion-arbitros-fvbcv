@@ -393,11 +393,11 @@ async function downloadCodespdf(codes){
       // curl -s <url> | openssl dgst -sha384 -binary | openssl base64 -A
       await loadScript(
         'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-        'sha384-RkMnpVgSGZXJMnUrBfFBN5AIjIm6b88nLGv/ANwIL3r4r5lBhLvjIBhbOGQgDrX' // TODO: verify hash
+        'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk'
       );
       await loadScript(
         'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js',
-        'sha384-dHRpw7hq6E8b/sRpA5NBUQE3Mx5YTwuNE1kFCZEv2TZ+eTMEcl9pWFHhz1pE8U' // TODO: verify hash
+        'sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3'
       );
     }
     const {jsPDF}=window.jspdf;
