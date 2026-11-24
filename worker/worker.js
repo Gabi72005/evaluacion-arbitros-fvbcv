@@ -332,6 +332,18 @@ async function logLoginFail(env, request, deviceId, deviceInfo) {
   } catch {}
 }
 
+async function appendAdminLog(env, request, event, extra) {
+  try {
+    await env.EVAL_KV.put(`l:${Date.now()}-${randomHex(4)}`, JSON.stringify({
+      type: event, timestamp: nowIso(),
+      ip: clientKey(request),
+      country: request.cf?.country || null,
+      ...extra,
+    }), { expirationTtl: 365 * 86400 });
+    pruneLogIfNeeded(env);
+  } catch {}
+}
+
 async function handleVerify(request, env) {
   const body = await parseJsonBody(request);
   if (!body) return json({ ok: false }, 400, env);
@@ -424,12 +436,13 @@ async function handleAddName(request, env) {
       existing.deviceInfo = null;
       existing.usedAt = null;
       await env.EVAL_KV.put(`c:${hash}`, JSON.stringify(existing));
+      await appendAdminLog(env, request, 'code_reactivate', { label: existing.label, codeHash: hash });
       return json({ ok: true, code, reactivated: true }, 200, env);
     }
     return json({ ok: true, code, alreadyExists: true }, 200, env);
   }
 
-  await env.EVAL_KV.put(`c:${hash}`, JSON.stringify({
+  const newRecord = {
     id: randomHex(8),
     codeHash: hash,
     label: name.trim(),
@@ -438,7 +451,9 @@ async function handleAddName(request, env) {
     deviceInfo: null,
     usedAt: null,
     createdAt: nowIso(),
-  }));
+  };
+  await env.EVAL_KV.put(`c:${hash}`, JSON.stringify(newRecord));
+  await appendAdminLog(env, request, 'code_add', { label: newRecord.label, codeHash: hash });
 
   return json({ ok: true, code, codeHash: hash }, 200, env);
 }
@@ -454,6 +469,7 @@ async function handleRevoke(request, env) {
 
   record.status = 'revoked';
   await env.EVAL_KV.put(`c:${codeHash}`, JSON.stringify(record));
+  await appendAdminLog(env, request, 'code_revoke', { label: record.label, codeHash });
   return json({ ok: true }, 200, env);
 }
 
@@ -500,6 +516,7 @@ async function handleDelete(request, env) {
   if (record.status !== 'revoked') return json({ error: 'Solo se pueden eliminar árbitros revocados' }, 400, env);
 
   await env.EVAL_KV.delete(`c:${codeHash}`);
+  await appendAdminLog(env, request, 'code_delete', { label: record.label, codeHash });
   return json({ ok: true }, 200, env);
 }
 
@@ -517,5 +534,6 @@ async function handleReactivate(request, env) {
   record.deviceInfo = null;
   record.usedAt = null;
   await env.EVAL_KV.put(`c:${codeHash}`, JSON.stringify(record));
+  await appendAdminLog(env, request, 'code_reactivate', { label: record.label, codeHash });
   return json({ ok: true }, 200, env);
 }
