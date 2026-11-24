@@ -155,7 +155,7 @@ function appHtml(){
   const pending=codes.filter(c=>c.status==='pending').length;
   const revoked=codes.filter(c=>c.status==='revoked').length;
   const pdfsHoy=logs.filter(l=>l.type==='pdf'&&(l.timestamp||'').startsWith(new Date().toISOString().slice(0,10))).length;
-  const fbUnread=feedbacks.filter(f=>!f.read).length;
+  const fbCount=feedbacks.length;
 
   return `<div class="app">
   <header>
@@ -176,7 +176,7 @@ function appHtml(){
     <div class="tabs">
       <button class="tab ${tab==='arbitros'?'on':''}" data-tab="arbitros">Árbitros</button>
       <button class="tab ${tab==='actividad'?'on':''}" data-tab="actividad">Actividad</button>
-      <button class="tab ${tab==='feedback'?'on':''}" data-tab="feedback">Feedback${fbUnread?` <span style="background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px">${fbUnread}</span>`:''}</button>
+      <button class="tab ${tab==='feedback'?'on':''}" data-tab="feedback">Feedback${fbCount?` <span style="background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px">${fbCount}</span>`:''}</button>
     </div>
     ${tab==='arbitros' ? tabArbitros(codes) : tab==='actividad' ? tabActividad(logs) : tabFeedback(feedbacks)}
   </div>
@@ -236,24 +236,17 @@ function tabFeedback(items){
   if(!items.length) return `<div class="card"><div class="empty">Sin mensajes todavía.</div></div>`;
   return `<div class="card" style="padding:0;overflow:hidden">
   ${items.map(f=>{
-    const unread=!f.read;
     const key=esc(f._key||'');
-    const typeLabel=f.type==='queja'?'⚠ Queja':'💡 Sugerencia';
     const typePill=f.type==='queja'?'<span class="pill ko">⚠ Queja</span>':'<span class="pill ok">💡 Sugerencia</span>';
-    return `<div data-fbkey="${key}" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;background:${unread?'var(--bg2, #f7f8fc)':'#fff'};transition:background .15s" onclick="fbMarkRead('${key}',true,this)">
-      <div style="flex:none;margin-top:3px">
-        <div title="${unread?'No leído':'Leído'}" style="width:10px;height:10px;border-radius:50%;background:${unread?'var(--blue)':'transparent'};border:2px solid ${unread?'var(--blue)':'#bbb'};transition:all .2s"></div>
-      </div>
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)">
       <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           ${typePill}
           <span class="ts">${esc(f.country||'—')} · ${fmtDate(f.timestamp)}</span>
-          <span style="margin-left:auto;flex:none">
-            <button onclick="event.stopPropagation();fbMarkRead('${key}',${unread?'false':'true'},this.closest('[data-fbkey]'))" class="btn sec" style="font-size:11px;padding:3px 8px">${unread?'Marcar leído':'Marcar no leído'}</button>
-          </span>
         </div>
-        <div style="font-weight:${unread?'600':'400'};font-size:14px;white-space:pre-wrap;word-break:break-word;color:${unread?'var(--text)':'var(--dim)'}">${esc(f.message||'')}</div>
+        <div style="font-size:14px;white-space:pre-wrap;word-break:break-word">${esc(f.message||'')}</div>
       </div>
+      <button onclick="fbDelete('${key}')" class="btn dan" style="flex:none;font-size:12px;padding:5px 10px" title="Eliminar">🗑 Borrar</button>
     </div>`;
   }).join('')}
   </div>`;
@@ -266,15 +259,14 @@ function statusPill(s){
   return `<span class="pill na">${esc(s)}</span>`;
 }
 
-async function fbMarkRead(key, read, el){
+async function fbDelete(key){
   try{
-    await fetch(WORKER_URL+'/admin/feedback/read',{
+    await fetch(WORKER_URL+'/admin/feedback/delete',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
-      body:JSON.stringify({key,read})
+      body:JSON.stringify({key})
     });
-    // update local state and re-render
-    feedbacks=feedbacks.map(f=>f._key===key?{...f,read}:f);
+    feedbacks=feedbacks.filter(f=>f._key!==key);
     render();
   }catch{}
 }
