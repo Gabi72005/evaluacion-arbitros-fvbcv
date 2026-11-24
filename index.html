@@ -210,7 +210,7 @@ function renderLogin(err){
     try{
       const r=await fetch(WORKER_URL+'/auth/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,deviceId:getDeviceId(),deviceInfo:getDeviceInfo()})});
       const d=await r.json();
-      if(d.ok){localStorage.setItem('_session',d.token);if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}render();}
+      if(d.ok){localStorage.setItem('_session',d.token);if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');if(d.label){localStorage.setItem('_session_label',d.label);mem.examiner=d.label;persist();}render();}
       else{errEl.textContent=d.error||'Código incorrecto';btn.disabled=false;btn.textContent='Entrar';}
     }catch(e){errEl.textContent='Error de conexión. Comprueba internet.';btn.disabled=false;btn.textContent='Entrar';}
   };
@@ -229,7 +229,7 @@ async function initApp(){
       if(d.ok){
         try{localStorage.setItem('_lastVerified',String(Date.now()));}catch{}
         if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');
-        if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}
+        if(d.label){localStorage.setItem('_session_label',d.label);mem.examiner=d.label;persist();}
         render();return;
       }
     }catch(e){
@@ -241,7 +241,7 @@ async function initApp(){
         }catch{}
       }
     }
-    localStorage.removeItem('_session');localStorage.removeItem('_master');
+    localStorage.removeItem('_session');localStorage.removeItem('_master');localStorage.removeItem('_session_label');
   }
   renderLogin();
 }
@@ -271,7 +271,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 function newEval(){
-  return {id:uid(),created:Date.now(),updated:Date.now(),status:'draft',examiner:mem.examiner||'',aspirant:'',role:'',partido:'',categoria:'',genero:'',nivel:'',fecha:today(),items:{},comments:'',nEval:'',nEvalAuto:true};
+  return {id:uid(),created:Date.now(),updated:Date.now(),status:'draft',examiner:localStorage.getItem('_session_label')||mem.examiner||'',aspirant:'',role:'',partido:'',categoria:'',genero:'',nivel:'',fecha:today(),items:{},comments:'',nEval:'',nEvalAuto:true};
 }
 function getEval(id){return mem.evals.find(e=>e.id===id)}
 const normName=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
@@ -282,7 +282,7 @@ function prevEvals(ev){ // otras evaluaciones del mismo aspirante (cualquier rol
 function suggestN(ev){const p=prevEvals(ev); return p.length? Math.max(p.length,...p.map(e=>+e.nEval||0))+1 : 1;}
 function autoN(ev){ if(ev.nEvalAuto!==false) ev.nEval=ev.aspirant.trim()?suggestN(ev):''; }
 function knownAspirants(){const m=new Map();mem.evals.forEach(e=>{const n=normName(e.aspirant);if(n&&!m.has(n))m.set(n,e.aspirant.trim());});return [...m.values()].sort((a,b)=>a.localeCompare(b,'es'));}
-function save(){ if(!S.cur)return; S.cur.updated=Date.now(); const i=mem.evals.findIndex(e=>e.id===S.cur.id); if(i<0)mem.evals.unshift(S.cur); else mem.evals[i]=S.cur; if(S.cur.examiner) mem.examiner=S.cur.examiner; persist(); }
+function save(){ if(!S.cur)return; S.cur.updated=Date.now(); const i=mem.evals.findIndex(e=>e.id===S.cur.id); if(i<0)mem.evals.unshift(S.cur); else mem.evals[i]=S.cur; persist(); }
 
 /* ---------- Cálculo ---------- */
 function secStats(ev,sec){
@@ -312,8 +312,8 @@ function renderHome(){
   <main>
     <div class="card">
       <h2>Examinador</h2>
-      <input class="t" id="exName" placeholder="Tu nombre y apellidos" value="${esc(mem.examiner)}" autocomplete="name">
-      <div class="hint">Se guarda en este móvil y aparece en todos los PDF.</div>
+      <div style="padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:#f8fafc;font-size:16px;font-weight:600;color:var(--ink)">${esc(localStorage.getItem('_session_label')||mem.examiner||'—')}</div>
+      <div class="hint">Nombre vinculado a tu código de acceso. Aparece en todos los PDF.</div>
     </div>
     <button class="btn pri" id="newBtn">+ Nueva evaluación</button>
     <div class="card" style="margin-top:14px">
@@ -333,7 +333,6 @@ function renderHome(){
       <button id="fbBtn" style="background:none;border:none;color:var(--blue);font-size:13px;cursor:pointer;text-decoration:underline;padding:4px 8px">Sugerencias o quejas</button>
     </div>
   </main>`;
-  document.getElementById('exName').oninput=e=>{mem.examiner=e.target.value;persist();};
   document.getElementById('newBtn').onclick=()=>{S.cur=newEval();S.tab='datos';S.open={};S.view='eval';render();window.scrollTo(0,0)};
   document.getElementById('fbBtn').onclick=()=>openFeedbackModal();
   $app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.cur=getEval(b.dataset.open);S.tab=S.cur.status==='done'?'final':'datos';S.open={};S.view='eval';render();window.scrollTo(0,0)});
@@ -374,8 +373,8 @@ function viewDatos(ev){
     <label class="f" for="f_nEval">Nº de evaluación de este aspirante</label>
     ${nEvalSel(ev)}
     <div class="hint" id="nEvalHint">${ev.nEvalAuto!==false&&ev.aspirant.trim()?'Calculado según tu historial. Puedes cambiarlo.':'Sale en el PDF y en el nombre del archivo.'}</div>
-    <label class="f" for="f_examiner">Examinador</label>
-    <input class="t" id="f_examiner" data-f="examiner" value="${esc(ev.examiner)}" placeholder="Tu nombre">
+    <label class="f">Examinador</label>
+    <div style="padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:#f8fafc;font-size:16px;font-weight:600;color:var(--ink)">${esc(ev.examiner||localStorage.getItem('_session_label')||'—')}</div>
   </div>
   <div class="card"><h2>Partido</h2>
     <label class="f" for="f_partido">Partido</label>
@@ -426,7 +425,6 @@ function viewSection(ev,r,sec){
 function viewFinal(ev,r,g){
   const missing=[];
   if(!ev.aspirant.trim())missing.push('nombre del aspirante');
-  if(!ev.examiner.trim())missing.push('tu nombre');
   return `${g.pending?`<div class="warn">Quedan <b>${g.pending}</b> ítems sin marcar. Saldrán en blanco en el PDF.</div>`:''}
   ${missing.length?`<div class="warn">Falta: ${missing.join(', ')} (pestaña Datos).</div>`:''}
   <div class="card summary"><h2>Resumen · ${r.name}</h2>
