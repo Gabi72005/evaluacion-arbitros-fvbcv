@@ -216,6 +216,12 @@ function renderLogin(err){
   };
 }
 async function initApp(){
+  // U6: pre-fill code from #c=XXXX-XXXX fragment (never reaches server logs)
+  let _prefillCode=null;
+  try{
+    const m=location.hash.match(/^#c=([A-Z0-9]{4}-?[A-Z0-9]{4})$/i);
+    if(m){_prefillCode=m[1].toUpperCase().replace(/([A-Z0-9]{4})([A-Z0-9]{4})$/,'$1-$2');history.replaceState(null,'',location.pathname);}
+  }catch{}
   const token=localStorage.getItem('_session');
   if(token){
     const $a=document.getElementById('app');
@@ -246,6 +252,7 @@ async function initApp(){
     localStorage.removeItem('_session');localStorage.removeItem('_master');localStorage.removeItem('_session_label');
   }
   renderLogin();
+  if(_prefillCode){const f=document.getElementById('lCode');if(f){f.value=_prefillCode;f.dispatchEvent(new Event('input'));}}
 }
 function exitMaster(){
   stopSessionWatch();
@@ -460,9 +467,18 @@ function viewSection(ev,r,sec){
 }
 function viewFinal(ev,r,g){
   const missing=[];
-  if(!ev.aspirant.trim())missing.push('nombre del aspirante');
-  return `${g.pending?`<div class="warn">Quedan <b>${g.pending}</b> ítems sin marcar. Saldrán en blanco en el PDF.</div>`:''}
-  ${missing.length?`<div class="warn">Falta: ${missing.join(', ')} (pestaña Datos).</div>`:''}
+  if(!ev.aspirant.trim())missing.push({label:'nombre del aspirante',jump:'datos:aspirant'});
+  // Build pending items list for U3
+  const pendingItems=[];
+  r.sections.forEach(sec=>{
+    sec.items.forEach(([lbl],i)=>{
+      if(!(ev.items[sec.key+'.'+i]||{}).v)
+        pendingItems.push({tab:sec.key,key:sec.key+'.'+i,text:`${sec.name} · ${lbl}`});
+    });
+  });
+  const shown=pendingItems.slice(0,8), more=pendingItems.length-8;
+  return `${pendingItems.length?`<div class="warn">Quedan <b>${pendingItems.length}</b> ítem${pendingItems.length!==1?'s':''} sin marcar. Saldrán en blanco en el PDF.<br><span style="font-size:13px">${shown.map(p=>`<a href="#" data-jump="${esc(p.tab)}:${esc(p.key)}" style="color:var(--blue);text-decoration:underline;margin-right:10px">${esc(p.text)}</a>`).join('')}${more>0?`<span style="color:var(--mute)">y ${more} más</span>`:''}</span></div>`:''}
+  ${missing.length?`<div class="warn">Falta: ${missing.map(m=>`<a href="#" data-jump="${esc(m.jump)}" style="color:var(--blue);text-decoration:underline">${esc(m.label)}</a>`).join(', ')} (pestaña Datos).</div>`:''}
   <div class="card summary"><h2>Resumen · ${r.name}</h2>
     ${r.sections.map((s,i)=>{const st=g.secs[i];return `<div class="r"><div><b>${s.name}</b><div class="hint" style="margin:0">${st.ap} aptos · ${st.no} no aptos${st.pending?' · '+st.pending+' sin marcar':''} · mín. ${s.min}</div></div><span class="pill ${st.state}">${st.pass?'SUPERA':(st.fail?'NO SUPERA':'pendiente')}</span></div>`}).join('')}
     <div class="r"><b>Resultado global</b><span class="big" style="color:${g.pass?'var(--ok)':'var(--ko)'}">${g.pass?'SUPERA':'NO SUPERA'}</span></div>
@@ -493,12 +509,38 @@ function bindEval(ev,r){
       document.getElementById('nEvalHint').textContent=ev.nEvalAuto!==false&&ev.aspirant.trim()?'Calculado según tu historial. Puedes cambiarlo.':'Sale en el PDF y en el nombre del archivo.';}});
   bindN(ev);
   m.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.goto;render();window.scrollTo(0,0)});
+  // U3: jump links in Final tab → go to section and highlight item
+  m.querySelectorAll('[data-jump]').forEach(a=>{a.onclick=e=>{
+    e.preventDefault();
+    const [tabKey,itemKey]=a.dataset.jump.split(':');
+    S.tab=tabKey;render();window.scrollTo(0,0);
+    setTimeout(()=>{
+      const el=document.getElementById(tabKey==='datos'?'f_'+itemKey:'it_'+itemKey.replace('.','_'));
+      if(!el)return;
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+      if(tabKey==='datos'){el.focus();}
+      else{el.style.outline='3px solid var(--blue)';el.style.transition='outline .2s';setTimeout(()=>{el.style.outline='';},1500);}
+    },50);
+  };});
   m.querySelectorAll('[data-set]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.set, it=ev.items[k]||(ev.items[k]={});
+    const prevV=it.v;
     it.v= it.v===b.dataset.v? null : b.dataset.v;
     if(it.v==='no'&&!it.obs) S.open[k]=true;
     save(); const y=window.scrollY; render(); window.scrollTo(0,y);
-    if(it.v==='no'&&S.open[k]){const t=document.querySelector(`[data-obstext="${k}"]`); if(t&&!it.obs) t.focus({preventScroll:true});}
+    const opensObs=it.v==='no'&&S.open[k];
+    if(opensObs){const t=document.querySelector(`[data-obstext="${k}"]`); if(t&&!it.obs) t.focus({preventScroll:true});}
+    // U2: auto-advance to next pending item when setting a new value (not correcting, not opening obs)
+    if(it.v && !prevV && !opensObs){
+      setTimeout(()=>{
+        const allItems=[...document.querySelectorAll('.item')];
+        const cur=document.getElementById('it_'+k.replace('.','_'));
+        const curIdx=cur?allItems.indexOf(cur):-1;
+        const next=allItems.slice(curIdx+1).find(el=>!el.classList.contains('apto')&&!el.classList.contains('no'));
+        if(next){next.scrollIntoView({behavior:'smooth',block:'center'});}
+        else{const nx=document.querySelector('[data-goto]');if(nx)nx.scrollIntoView({behavior:'smooth',block:'center'});}
+      },150);
+    }
   });
   m.querySelectorAll('[data-obs]').forEach(b=>b.onclick=()=>{const k=b.dataset.obs;S.open[k]=!S.open[k];const y=window.scrollY;render();window.scrollTo(0,y);
     if(S.open[k]){const t=document.querySelector(`[data-obstext="${k}"]`);t&&t.focus({preventScroll:true});}});

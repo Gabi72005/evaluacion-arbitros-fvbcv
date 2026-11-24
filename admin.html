@@ -182,6 +182,10 @@ label.f{
   margin:14px 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em
 }
 
+/* ── Stat buttons (A2) ──────────────────────────────────── */
+.stat-btn{cursor:pointer;text-align:center;border:0;font:inherit}
+.stat-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.12)}
+
 /* ── Actions / Toolbar ──────────────────────────────────── */
 .acts{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
 .toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
@@ -245,6 +249,7 @@ let secret = sessionStorage.getItem('_adm') || '';
 let tab = 'arbitros';
 let feedbacks = [];
 let data = null;
+let statusFilter = null; // 'active' | 'pending' | 'revoked' | null
 try { const c = sessionStorage.getItem('_adm_cache'); if(c) data = JSON.parse(c); } catch{}
 
 // L2: strip code field from cache to avoid storing full code list in sessionStorage
@@ -339,11 +344,11 @@ function appHtml(){
   <div class="wrap">
     <div class="stats">
       <div class="stat" style="border-top-color:var(--blue)"><div class="n" style="color:var(--blue)">${codes.length}</div><div class="l">Árbitros</div></div>
-      <div class="stat" style="border-top-color:var(--ok)"><div class="n" style="color:var(--ok)">${active}</div><div class="l">Activos</div></div>
-      <div class="stat" style="border-top-color:#d97706"><div class="n" style="color:#d97706">${pending}</div><div class="l">Sin activar</div></div>
-      <div class="stat" style="border-top-color:var(--ko)"><div class="n" style="color:var(--ko)">${revoked}</div><div class="l">Revocados</div></div>
-      <div class="stat" style="border-top-color:#64748b"><div class="n" style="color:#64748b">${pdfsHoy}</div><div class="l">PDFs hoy</div></div>
-      <div class="stat" style="border-top-color:var(--blue)"><div class="n" style="color:var(--blue)">${fbCount}</div><div class="l">Feedback</div></div>
+      <button class="stat stat-btn" data-filter="active" style="border-top-color:var(--ok);${statusFilter==='active'?'border:2px solid var(--ok);border-top:3px solid var(--ok)':''}"><div class="n" style="color:var(--ok)">${active}</div><div class="l">Activos</div></button>
+      <button class="stat stat-btn" data-filter="pending" style="border-top-color:#d97706;${statusFilter==='pending'?'border:2px solid #d97706;border-top:3px solid #d97706':''}"><div class="n" style="color:#d97706">${pending}</div><div class="l">Sin activar</div></button>
+      <button class="stat stat-btn" data-filter="revoked" style="border-top-color:var(--ko);${statusFilter==='revoked'?'border:2px solid var(--ko);border-top:3px solid var(--ko)':''}"><div class="n" style="color:var(--ko)">${revoked}</div><div class="l">Revocados</div></button>
+      <button class="stat stat-btn" data-goto-tab="actividad" style="border-top-color:#64748b"><div class="n" style="color:#64748b">${pdfsHoy}</div><div class="l">PDFs hoy</div></button>
+      <button class="stat stat-btn" data-goto-tab="feedback" style="border-top-color:var(--blue)"><div class="n" style="color:var(--blue)">${fbCount}</div><div class="l">Feedback</div></button>
     </div>
     <div class="tabs">
       <button class="tab ${tab==='arbitros'?'on':''}" data-tab="arbitros">Árbitros</button>
@@ -356,7 +361,9 @@ function appHtml(){
 }
 
 function tabArbitros(codes){
-  const sorted=[...codes].sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
+  const statusLabel={'active':'Activos','pending':'Sin activar','revoked':'Revocados'};
+  let sorted=[...codes].sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
+  if(statusFilter) sorted=sorted.filter(c=>c.status===statusFilter);
   return `<div class="toolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
     <input class="t" id="arbSearch" placeholder="Buscar árbitro..." oninput="filterRows('arbSearch','arbTbody')" style="flex:1;min-width:0;max-width:320px;margin:0">
     <div class="toolbar-btns">
@@ -364,6 +371,7 @@ function tabArbitros(codes){
       <button class="btn pri" id="addBtn">+ Añadir árbitro</button>
     </div>
   </div>
+  ${statusFilter?`<div style="font-size:13px;color:var(--mute);margin-bottom:8px">Mostrando: <b style="color:var(--ink)">${statusLabel[statusFilter]}</b> (${sorted.length}) · <a href="#" id="clearFilter" style="color:var(--blue)">Quitar filtro</a></div>`:''}
   <div class="card" style="padding:0;overflow:hidden">
   ${sorted.length?`<table class="arb-table">
     <thead><tr>
@@ -438,7 +446,8 @@ function showMsgModal(c){
   const nombre=c.label||'árbitro';
   const codigo=c.code||'(código no disponible — recarga la página)';
   const guia=GUIDE_URL?`\n\nGuía de uso de la aplicación:\n${GUIDE_URL}`:'';
-  const msg=`Hola ${nombre},\n\nTe informamos de que has sido seleccionado/a como árbitro examinador/a en la FVBCV.\n\nPara acceder a la aplicación de evaluación, utiliza el siguiente código:\n\nCódigo: ${codigo}\n\nAccede desde:\n${APP_URL}${guia}\n\nSi tienes algún problema para acceder, contacta con nosotros.\n\nUn saludo,\nFVBCV`;
+  const enlace=`${APP_URL}/#c=${encodeURIComponent(codigo)}`;
+  const msg=`Hola ${nombre},\n\nTe informamos de que has sido seleccionado/a como árbitro examinador/a en la FVBCV.\n\nPara acceder a la aplicación de evaluación, abre el siguiente enlace — el código ya aparecerá escrito, solo tienes que pulsar Entrar:\n\n${enlace}${guia}\n\nO, si prefieres escribir el código a mano:\n\nCódigo: ${codigo}\nURL: ${APP_URL}\n\nSi tienes algún problema para acceder, contacta con nosotros.\n\nUn saludo,\nFVBCV`;
 
   const md=document.getElementById('modal');
   md.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal-sheet" style="max-width:520px">
@@ -502,7 +511,13 @@ function bindApp(){
     try{await fetch(WORKER_URL+'/admin/logout',{method:'POST',headers:{'Authorization':'Bearer '+secret}});}catch{}
     sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();
   };
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;if(tab==='arbitros')statusFilter=null;render();});
+  // A2: stat-btn filters
+  document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{
+    const f=b.dataset.filter;statusFilter=statusFilter===f?null:f;tab='arbitros';render();
+  });
+  document.querySelectorAll('[data-goto-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.gotoTab;render();});
+  const cf=document.getElementById('clearFilter');if(cf)cf.onclick=e=>{e.preventDefault();statusFilter=null;render();};
   const ab=document.getElementById('addBtn');if(ab)ab.onclick=showAddModal;
   const pb=document.getElementById('pdfBtn');if(pb)pb.onclick=()=>downloadCodespdf(data.codes||[]);
   document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=()=>showRevokeModal(b.dataset.revoke,b.dataset.label));
@@ -546,6 +561,34 @@ function showAddModal(){
     const name=document.getElementById('mname').value.trim();
     const err=document.getElementById('mErr');
     if(!name){err.textContent='Escribe el nombre.';return;}
+    // A3: check for similar names before calling the API
+    const normN=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    const norm=normN(name);
+    const similar=(data.codes||[]).filter(c=>{
+      const cn=normN(c.label); if(!cn||c.status==='revoked') return false;
+      if(cn===norm&&c.label.trim()!==name) return true;
+      if(cn.includes(norm)||norm.includes(cn)) return true;
+      const wp=norm.split(' '),wc=cn.split(' ');
+      return wp.length>=2&&wc.length>=2&&wp[0]===wc[0]&&wp[1]===wc[1];
+    });
+    if(similar.length){
+      const res=document.getElementById('mResult');
+      res.innerHTML=`<div style="background:var(--warn-l);border:1px solid #f59e0b;border-radius:8px;padding:12px;font-size:13px">
+        <b>Ya existe un árbitro parecido:</b><br>${similar.map(c=>`<span style="color:var(--ink)">${esc(c.label)}</span> <span class="code" style="font-size:11px">${esc(c.code||'...')}</span> ${statusPill(c.status)}`).join('<br>')}
+        <br><span style="color:var(--mute)">¿Es la misma persona?</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn sec" id="mSamePerson" style="flex:1;font-size:12px">Es la misma persona</button>
+        <button class="btn pri" id="mDiffPerson" style="flex:1;font-size:12px">Es otra persona, generar código</button>
+      </div>`;
+      document.getElementById('mSamePerson').onclick=()=>{md.innerHTML='';};
+      document.getElementById('mDiffPerson').onclick=()=>{res.innerHTML='';proceedAdd(name);};
+      return;
+    }
+    proceedAdd(name);
+  };
+  async function proceedAdd(name){
+    const err=document.getElementById('mErr');
     const btn=document.getElementById('mAdd');
     btn.disabled=true;btn.textContent='Generando…';
     try{
