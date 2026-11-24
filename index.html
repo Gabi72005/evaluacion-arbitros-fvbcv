@@ -210,7 +210,7 @@ function renderLogin(err){
     try{
       const r=await fetch(WORKER_URL+'/auth/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,deviceId:getDeviceId(),deviceInfo:getDeviceInfo()})});
       const d=await r.json();
-      if(d.ok){localStorage.setItem('_session',d.token);if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');if(d.label){localStorage.setItem('_session_label',d.label);mem.examiner=d.label;persist();}startSessionWatch();render();}
+      if(d.ok){localStorage.setItem('_session',d.token);if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');lastPdf=null;load();if(d.label){localStorage.setItem('_session_label',d.label);mem.examiner=d.label;persist();}startSessionWatch();render();}
       else{errEl.textContent=d.error||'Código incorrecto';btn.disabled=false;btn.textContent='Entrar';}
     }catch(e){errEl.textContent='Error de conexión. Comprueba internet.';btn.disabled=false;btn.textContent='Entrar';}
   };
@@ -229,6 +229,7 @@ async function initApp(){
       if(d.ok){
         try{localStorage.setItem('_lastVerified',String(Date.now()));}catch{}
         if(d.masterSession)localStorage.setItem('_master','1');else localStorage.removeItem('_master');
+        lastPdf=null;load();
         if(d.label){localStorage.setItem('_session_label',d.label);mem.examiner=d.label;persist();}
         startSessionWatch();render();return;
       }
@@ -248,8 +249,8 @@ async function initApp(){
 }
 function exitMaster(){
   stopSessionWatch();
-  try{localStorage.removeItem('_session');localStorage.removeItem('_master');}catch{}
-  renderLogin();
+  try{localStorage.removeItem(KEY_MASTER);localStorage.removeItem('_session');localStorage.removeItem('_master');}catch{}
+  lastPdf=null;load();renderLogin();
 }
 
 /* ---------- Vigilancia de sesión (re-verifica cada 2 min) ---------- */
@@ -283,9 +284,11 @@ function masterBanner(){
 
 /* ---------- Almacenamiento ---------- */
 const KEY='evalArbitros.v1';
+const KEY_MASTER=KEY+'.prueba';
 let mem={examiner:'',evals:[]};
-function load(){try{const s=localStorage.getItem(KEY); if(s) mem=Object.assign(mem,JSON.parse(s));}catch(e){}}
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(mem));}catch(e){}}
+function _storageKey(){return localStorage.getItem('_master')?KEY_MASTER:KEY;}
+function load(){try{const s=localStorage.getItem(_storageKey());mem={examiner:'',evals:[]};if(s)mem=Object.assign(mem,JSON.parse(s));}catch(e){}}
+function persist(){try{localStorage.setItem(_storageKey(),JSON.stringify(mem));}catch(e){}}
 load();
 
 const S={view:'home', cur:null, tab:'datos', open:{}};
