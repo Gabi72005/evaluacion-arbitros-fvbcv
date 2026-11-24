@@ -181,7 +181,8 @@ function appHtml(){
 
 function tabArbitros(codes){
   const sorted=[...codes].sort((a,b)=>(a.label||'').localeCompare(b.label||'','es'));
-  return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+    <input class="t" id="arbSearch" placeholder="🔍 Buscar árbitro…" oninput="filterRows('arbSearch','arbTbody')" style="flex:1;min-width:160px;max-width:320px;margin:0">
     <button class="btn sec" id="pdfBtn">⬇ Descargar PDF</button>
     <button class="btn pri" id="addBtn">＋ Añadir árbitro</button>
   </div>
@@ -191,7 +192,7 @@ function tabArbitros(codes){
       <th>Nombre</th><th>Código</th><th>Estado</th>
       <th class="hide">Dispositivo</th><th class="hide">Último acceso</th><th></th>
     </tr></thead>
-    <tbody>${sorted.map(c=>`<tr>
+    <tbody id="arbTbody">${sorted.map(c=>`<tr>
       <td><b>${esc(c.label)}</b></td>
       <td><span class="code">${esc(c.code||'...')}</span></td>
       <td>${statusPill(c.status)}</td>
@@ -209,10 +210,13 @@ function tabArbitros(codes){
 }
 
 function tabActividad(logs){
-  return `<div class="card" style="padding:0;overflow:hidden">
+  return `<div style="margin-bottom:10px">
+    <input class="t" id="actSearch" placeholder="🔍 Buscar árbitro…" oninput="filterRows('actSearch','actTbody')" style="max-width:320px;margin:0">
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
   ${logs.length?`<table>
     <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th></tr></thead>
-    <tbody>${logs.map(l=>`<tr>
+    <tbody id="actTbody">${logs.map(l=>`<tr>
       <td>${l.type==='pdf'?'<span class="pill ok">📄 PDF</span>':'<span class="pill na">🔑 Login</span>'}</td>
       <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+esc(String(l.nEval))+'ª':''}</div>`:''}
           ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
@@ -229,6 +233,14 @@ function statusPill(s){
   if(s==='pending') return '<span class="pill na">⏳ Sin activar</span>';
   if(s==='revoked') return '<span class="pill ko">✗ Revocado</span>';
   return `<span class="pill na">${esc(s)}</span>`;
+}
+
+function filterRows(inputId, tbodyId){
+  const q=(document.getElementById(inputId)?.value||'').toLowerCase().trim();
+  document.querySelectorAll('#'+tbodyId+' tr').forEach(tr=>{
+    const name=(tr.querySelector('td b')?.textContent||'').toLowerCase();
+    tr.style.display=(!q||name.includes(q))?'':'none';
+  });
 }
 
 function bindApp(){
