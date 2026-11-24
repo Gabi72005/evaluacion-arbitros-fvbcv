@@ -226,9 +226,19 @@ async function initApp(){
       const r=await fetch(WORKER_URL+'/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token}),signal:ctrl.signal});
       clearTimeout(tid);
       const d=await r.json();
-      if(d.ok){if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}render();return;}
+      if(d.ok){
+        try{localStorage.setItem('_lastVerified',String(Date.now()));}catch{}
+        if(d.label&&!mem.examiner){mem.examiner=d.label;persist();}
+        render();return;
+      }
     }catch(e){
-      if(e&&e.name==='AbortError'){render();return;}
+      if(e&&e.name==='AbortError'){
+        // M2: only fail-open if last successful verify was within 72 hours
+        try{
+          const lv=parseInt(localStorage.getItem('_lastVerified')||'0',10);
+          if(lv&&(Date.now()-lv)<72*3600*1000){render();return;}
+        }catch{}
+      }
     }
     localStorage.removeItem('_session');
   }
@@ -299,7 +309,7 @@ function renderHome(){
         const g=globalStats(e);
         const res=e.status==='done'&&g?`<span class="pill ${g.pass?'ok':'ko'}" style="padding:2px 8px;font-size:11px">${g.pass?'SUPERA':'NO SUPERA'}</span>`:'<span class="tag d">BORRADOR</span>';
         return `<li><div class="main"><div class="nm">${esc(e.aspirant||'Sin nombre')} ${res}</div>
-        <div class="ds">${e.role?ROLES[e.role].short:'Sin rol'}${e.nEval?' · '+ordinal(e.nEval)+' eval.':''} · ${fmtDate(e.fecha)}${e.partido?' · '+esc(e.partido):''}</div></div>
+        <div class="ds">${e.role?ROLES[e.role].short:'Sin rol'}${e.nEval?' · '+esc(ordinal(e.nEval))+' eval.':''} · ${esc(fmtDate(e.fecha))}${e.partido?' · '+esc(e.partido):''}</div></div>
         <div class="act"><button data-open="${e.id}">${e.status==='done'?'Ver':'Seguir'}</button>
         ${e.status==='done'?`<button data-pdf="${e.id}" title="PDF">PDF</button>`:''}
         <button data-del="${e.id}" aria-label="Borrar">🗑</button></div></li>`}).join('')}</ul>`
@@ -365,7 +375,7 @@ function viewDatos(ev){
 function prevBoxHtml(ev){
   const p=prevEvals(ev); if(!p.length) return ev.aspirant.trim()?'<div class="hint">Primera vez que evalúas a esta persona en este móvil.</div>':'';
   return `<div class="prev"><b>Ya tienes ${p.length} evaluaci${p.length>1?'ones':'ón'} de esta persona:</b><ul>${p.map(e=>{const g=globalStats(e);
-    return `<li>${e.nEval?ordinal(e.nEval)+' · ':''}${e.role?ROLES[e.role].short:'Sin rol'} · ${fmtDate(e.fecha)}${e.partido?' · '+esc(e.partido):''} · ${e.status==='done'&&g?(g.pass?'<b style="color:var(--ok)">SUPERA</b>':'<b style="color:var(--ko)">NO SUPERA</b>'):'borrador'}</li>`}).join('')}</ul></div>`;
+    return `<li>${e.nEval?esc(ordinal(e.nEval))+' · ':''}${e.role?ROLES[e.role].short:'Sin rol'} · ${esc(fmtDate(e.fecha))}${e.partido?' · '+esc(e.partido):''} · ${e.status==='done'&&g?(g.pass?'<b style="color:var(--ok)">SUPERA</b>':'<b style="color:var(--ko)">NO SUPERA</b>'):'borrador'}</li>`}).join('')}</ul></div>`;
 }
 function nEvalSel(ev){
   const max=Math.max(8,+ev.nEval||0);

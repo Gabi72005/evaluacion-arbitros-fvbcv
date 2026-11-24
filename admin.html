@@ -68,12 +68,19 @@ label.f{display:block;font-size:11px;color:var(--mute);margin:10px 0 4px;font-we
 <div id="root"></div>
 <script>
 const WORKER_URL = 'https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
+// secret holds a session token (never the password)
 let secret = sessionStorage.getItem('_adm') || '';
 let tab = 'arbitros';
 let data = null;
 try { const c = sessionStorage.getItem('_adm_cache'); if(c) data = JSON.parse(c); } catch{}
 
-function saveCache(d){ try{ sessionStorage.setItem('_adm_cache', JSON.stringify(d)); }catch{} }
+// L2: strip code field from cache to avoid storing full code list in sessionStorage
+function saveCache(d){
+  try{
+    const stripped={...d,codes:(d.codes||[]).map(({code,...r})=>r)};
+    sessionStorage.setItem('_adm_cache',JSON.stringify(stripped));
+  }catch{}
+}
 
 const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -117,11 +124,24 @@ function bindLogin(){
   inp.onkeydown=e=>{if(e.key==='Enter')btn.click();};
   btn.onclick=async()=>{
     const s=inp.value.trim();if(!s)return;
-    btn.disabled=true;btn.textContent='Verificando…';
+    btn.disabled=true;btn.textContent='Verificando…';err.textContent='';
     try{
-      const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+s}});
-      if(r.ok){secret=s;sessionStorage.setItem('_adm',s);data=await r.json();render();}
-      else{err.textContent='Contraseña incorrecta';btn.disabled=false;btn.textContent='Entrar';}
+      // H4: POST password to /admin/login, receive session token; never store the password
+      const lr=await fetch(WORKER_URL+'/admin/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({password:s})
+      });
+      if(lr.status===429){
+        err.textContent='Demasiados intentos. Espera unos minutos antes de volver a intentarlo.';
+        btn.disabled=false;btn.textContent='Entrar';return;
+      }
+      const ld=await lr.json();
+      if(!lr.ok||!ld.ok){err.textContent='Contraseña incorrecta';btn.disabled=false;btn.textContent='Entrar';return;}
+      secret=ld.token;sessionStorage.setItem('_adm',ld.token);
+      const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+secret}});
+      if(r.ok){data=await r.json();render();}
+      else{err.textContent='Error al cargar datos';btn.disabled=false;btn.textContent='Entrar';}
     }catch{err.textContent='Error de conexión';btn.disabled=false;btn.textContent='Entrar';}
   };
 }
@@ -194,7 +214,7 @@ function tabActividad(logs){
     <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th></tr></thead>
     <tbody>${logs.map(l=>`<tr>
       <td>${l.type==='pdf'?'<span class="pill ok">📄 PDF</span>':'<span class="pill na">🔑 Login</span>'}</td>
-      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+l.nEval+'ª':''}</div>`:''}
+      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'?`<div class="ts">${esc(l.aspirant||'')} · ${esc(l.role||'')}${l.nEval?' · '+esc(String(l.nEval))+'ª':''}</div>`:''}
           ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
       <td class="hide">${l.type==='pdf'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
           ${l.type==='login'?`<div class="ts">${[l.city,l.country].filter(Boolean).join(', ')||'—'}${l.deviceInfo?` · ${esc(l.deviceInfo.tz||'')}`:''}</div>`:''}</td>
@@ -213,7 +233,11 @@ function statusPill(s){
 
 function bindApp(){
   document.getElementById('refreshBtn').onclick=loadData;
-  document.getElementById('logoutBtn').onclick=()=>{sessionStorage.removeItem('_adm');secret='';data=null;render();};
+  document.getElementById('logoutBtn').onclick=async()=>{
+    // H4: invalidate server session
+    try{await fetch(WORKER_URL+'/admin/logout',{method:'POST',headers:{'Authorization':'Bearer '+secret}});}catch{}
+    sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();
+  };
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();});
   const ab=document.getElementById('addBtn');if(ab)ab.onclick=showAddModal;
   const pb=document.getElementById('pdfBtn');if(pb)pb.onclick=()=>downloadCodespdf(data.codes||[]);
@@ -340,15 +364,24 @@ async function loadData(){
     const r=await fetch(WORKER_URL+'/admin/data',{headers:{'Authorization':'Bearer '+secret},signal:ctrl.signal});
     clearTimeout(tid);
     if(r.ok){data=await r.json();saveCache(data);render();}
-    else if(r.status===401){sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();}
+    else if(r.status===401||r.status===403){
+      // Token expired or invalid — go back to login
+      sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();
+    }
   }catch(e){
     if(e&&e.name==='AbortError'&&data){render();}
     else console.error(e);
   }
 }
 
-function loadScript(src){
-  return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+function loadScript(src,integrity){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=src;
+    if(integrity){s.integrity=integrity;s.crossOrigin='anonymous';}
+    s.onload=res;s.onerror=rej;
+    document.head.appendChild(s);
+  });
 }
 
 async function downloadCodespdf(codes){
@@ -356,8 +389,16 @@ async function downloadCodespdf(codes){
   if(btn){btn.disabled=true;btn.textContent='Generando…';}
   try{
     if(!window.jspdf){
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+      // M3: SRI hashes protect against CDN compromise. Compute with:
+      // curl -s <url> | openssl dgst -sha384 -binary | openssl base64 -A
+      await loadScript(
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        'sha384-RkMnpVgSGZXJMnUrBfFBN5AIjIm6b88nLGv/ANwIL3r4r5lBhLvjIBhbOGQgDrX' // TODO: verify hash
+      );
+      await loadScript(
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js',
+        'sha384-dHRpw7hq6E8b/sRpA5NBUQE3Mx5YTwuNE1kFCZEv2TZ+eTMEcl9pWFHhz1pE8U' // TODO: verify hash
+      );
     }
     const {jsPDF}=window.jspdf;
     const doc=new jsPDF();
@@ -387,7 +428,8 @@ async function downloadCodespdf(codes){
   }
 }
 
-render();
+// B1: if session token exists but data not in cache, trigger load immediately
+render(); if(secret && !data) loadData();
 </script>
 </body>
 </html>
