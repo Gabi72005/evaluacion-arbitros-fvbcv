@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Admin · Evaluación Árbitros FVBCV</title>
+<link rel="icon" href="fvbcv-logo.png" type="image/png">
 <style>
 :root{
   --blue:#1E20E8; --blue-d:#1515C8; --blue-l:#EEEEFF;
@@ -39,7 +40,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;color:var(--mute);font-weight:700;border-bottom:1.5px solid var(--line);white-space:nowrap}
 td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 tr:last-child td{border-bottom:0}
-.code{font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.08em;color:var(--blue-d);background:var(--blue-l);border-radius:7px;padding:3px 8px}
+.code{font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.08em;color:#7A3800;background:#FFF0D0;border-radius:7px;padding:3px 8px}
 .ua{font-size:11px;color:var(--mute);margin-top:2px}
 .ts{font-size:12px;color:var(--mute)}
 .empty{color:var(--mute);font-size:14px;text-align:center;padding:20px}
@@ -136,7 +137,7 @@ function appHtml(){
 
   return `<div class="app">
   <header>
-    <img src="fvbcv-logo.png" alt="FVBCV" style="height:36px;width:36px;object-fit:contain;flex:none">
+    <img src="fvbcv-logo.png" alt="FVBCV" style="height:36px;width:36px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px">
     <h1>Panel Admin<span class="sub">Evaluación Árbitros FVBCV</span></h1>
     <button class="iconbtn" id="refreshBtn">↻</button>
     <button class="iconbtn" id="logoutBtn" style="margin-left:4px">Salir</button>
@@ -352,7 +353,7 @@ function downloadCodespdf(codes){
   const rows=sorted.map((c,i)=>`
     <tr style="background:${i%2===0?'#f8f9fa':'#fff'}">
       <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb">${esc(c.label)}</td>
-      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.1em;color:#1E20E8">${esc(c.code||'—')}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.1em;color:#7A3800;background:#FFF0D0">${esc(c.code||'—')}</td>
       <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;color:${c.status==='active'?'#17844a':'#999'}">${c.status==='active'?'Activo':'Sin activar'}</td>
     </tr>`).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
