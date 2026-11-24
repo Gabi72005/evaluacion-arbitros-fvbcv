@@ -205,7 +205,7 @@ function tabArbitros(codes){
       <td class="hide">${c.deviceInfo?`${parseBrowser(c.deviceInfo.ua)}<div class="ua">${esc(c.deviceInfo.screen||'')} · ${esc(c.deviceInfo.lang||'')}</div>`:'<span class="ts">—</span>'}</td>
       <td class="hide"><span class="ts">${c.usedAt?fmtDate(c.usedAt):'—'}</span></td>
       <td><div class="acts">
-        <button class="btn sec" data-msg="${esc(c.codeHash)}" style="font-size:12px;padding:6px 10px" title="Generar mensaje de bienvenida">📋</button>
+        <button class="btn sec" data-msg="${esc(c.codeHash)}" style="font-size:12px;padding:6px 10px" title="Generar mensaje de bienvenida">⬆</button>
         ${c.status!=='revoked'
           ?`<button class="btn dan" data-revoke="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Revocar</button>`
           :`<button class="btn ok2" data-reactivate="${esc(c.codeHash)}" data-label="${esc(c.label)}" style="font-size:12px;padding:6px 10px">Reactivar</button>
