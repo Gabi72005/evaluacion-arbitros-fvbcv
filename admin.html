@@ -281,7 +281,7 @@ let tab = 'arbitros';
 let feedbacks = [];
 let data = null;
 let uploads = [];              // PDFs enviados por los árbitros (metadata, sin bytes)
-let upSel = new Set(), upSearch = '', upFilter = 'all', upBusy = false;
+let upSel = new Set(), upSearch = '', upFilter = 'all', upCurso = 'all', upBusy = false;
 const UP_POLL_MS = 5 * 60 * 1000; // comprobar PDFs nuevos cada 5 min con el panel visible
 let statusFilter = null; // 'active' | 'pending' | 'revoked' | null
 let actPage=0, actTypeFilter='all', actResultFilter='all', actSearch='';
@@ -868,6 +868,7 @@ function setUploads(list){
 function upVisible(){
   return uploads.filter(u=>{
     if(upFilter==='new'&&!u.isNew) return false;
+    if(upCurso!=='all'&&u.curso!==upCurso) return false;
     if(!upSearch) return true;
     return [u.label,u.aspirant,u.examiner].some(v=>String(v||'').toLowerCase().includes(upSearch));
   });
@@ -878,12 +879,17 @@ function tabPdfs(){
   const allOn=vis.length>0&&vis.every(u=>upSel.has(u.id));
   const nSel=upSel.size;
   const chip=(id,label,active)=>`<button class="fchip${active?' on':''}" data-upfilter="${id}">${label}</button>`;
+  const cchip=(id,label)=>{const n=id==='all'?uploads.length:uploads.filter(u=>u.curso===id).length;
+    return `<button class="fchip${upCurso===id?' on':''}" data-upcurso="${id}">${label} (${n})</button>`;};
   return `
   <div class="act-toolbar">
     <input class="t" id="upSearch" placeholder="Buscar árbitro o aspirante..." value="${esc(upSearch)}" style="flex:1;min-width:140px;max-width:280px;margin:0">
     <div class="act-chips"><span class="chip-group">
       ${chip('all','Todos ('+uploads.length+')',upFilter==='all')}
       ${chip('new','Nuevos ('+nNew+')',upFilter==='new')}
+    </span>
+    <span class="chip-group">
+      ${cchip('all','Todos los cursos')}${cchip('nivel1','Nivel 1')}${cchip('nivel2','Nivel 2')}${cchip('anotador','Anotador')}
     </span></div>
   </div>
   <div class="up-actions">
@@ -894,7 +900,7 @@ function tabPdfs(){
   </div>
   <div class="card" style="padding:0;overflow:hidden">
   ${vis.length?`<label class="up-row" style="background:#f8fafc;cursor:pointer;font-size:12px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em">
-      <input type="checkbox" id="upAll"${allOn?' checked':''}> Seleccionar ${upSearch||upFilter!=='all'?'los mostrados':'todos'} (${vis.length})</label>
+      <input type="checkbox" id="upAll"${allOn?' checked':''}> Seleccionar ${upSearch||upFilter!=='all'||upCurso!=='all'?'los mostrados':'todos'} (${vis.length})</label>
     ${vis.map(u=>`<div class="up-row${u.isNew?' new':''}">
       <input type="checkbox" data-upsel="${esc(u.id)}"${upSel.has(u.id)?' checked':''} aria-label="Seleccionar">
       <div style="flex:1;min-width:0">
@@ -921,6 +927,7 @@ function bindPdfsTab(){
   const inp=document.getElementById('upSearch');
   if(inp) inp.oninput=()=>{upSearch=inp.value.toLowerCase().trim();renderPdfsTab();const i2=document.getElementById('upSearch');if(i2){i2.focus();i2.setSelectionRange(i2.value.length,i2.value.length);}};
   document.querySelectorAll('[data-upfilter]').forEach(b=>b.onclick=()=>{upFilter=b.dataset.upfilter;renderPdfsTab();});
+  document.querySelectorAll('[data-upcurso]').forEach(b=>b.onclick=()=>{upCurso=b.dataset.upcurso;renderPdfsTab();});
   document.querySelectorAll('[data-upsel]').forEach(c=>c.onchange=()=>{c.checked?upSel.add(c.dataset.upsel):upSel.delete(c.dataset.upsel);renderPdfsTab();});
   const all=document.getElementById('upAll');
   if(all) all.onchange=()=>{upVisible().forEach(u=>all.checked?upSel.add(u.id):upSel.delete(u.id));renderPdfsTab();};
