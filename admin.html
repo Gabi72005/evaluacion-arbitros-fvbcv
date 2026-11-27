@@ -296,6 +296,54 @@ function saveCache(d){
   }catch{}
 }
 
+// Cambios locales recientes (altas, revocar, reactivar, eliminar). El servidor puede
+// tardar en reflejarlos en /admin/data, así que los aplicamos encima durante unos
+// minutos para que la lista no "pierda" lo que acabas de hacer al recargar.
+const PENDING_TTL=3*60*1000;
+let pendingOps={};
+try{pendingOps=JSON.parse(sessionStorage.getItem('_adm_pending')||'{}')||{};}catch{pendingOps={};}
+function savePending(){
+  try{
+    const stripped={};
+    for(const [h,op] of Object.entries(pendingOps)){
+      stripped[h]=op.rec?{...op,rec:(({code,...r})=>r)(op.rec)}:op; // L2: sin códigos en sessionStorage
+    }
+    sessionStorage.setItem('_adm_pending',JSON.stringify(stripped));
+  }catch{}
+}
+function markPending(h,op){
+  const prev=pendingOps[h];
+  if(prev&&prev.kind==='add'&&op.kind==='patch') op={kind:'add',rec:{...prev.rec,...op.patch}};
+  pendingOps[h]={...op,t:Date.now()};
+  savePending();
+}
+function applyPending(codes,fromServer){
+  const now=Date.now();
+  const out=(codes||[]).slice();
+  for(const [h,op] of Object.entries(pendingOps)){
+    if(now-op.t>PENDING_TTL){delete pendingOps[h];continue;}
+    const i=out.findIndex(c=>c.codeHash===h);
+    if(op.kind==='del'){
+      if(i>=0) out.splice(i,1); else if(fromServer) delete pendingOps[h];
+    }else if(op.kind==='add'){
+      if(i<0) out.push({...op.rec});
+      else if(fromServer) delete pendingOps[h];           // el servidor ya lo tiene
+    }else if(op.kind==='patch'&&i>=0){
+      const synced=Object.entries(op.patch).every(([k,v])=>out[i][k]===v);
+      if(synced&&fromServer) delete pendingOps[h]; else out[i]={...out[i],...op.patch};
+    }
+  }
+  savePending();
+  return out;
+}
+function patchLocal(codeHash,patch){
+  if(!data||!data.codes) return;
+  const i=data.codes.findIndex(c=>c.codeHash===codeHash);
+  if(i>=0) data.codes[i]={...data.codes[i],...patch};
+  markPending(codeHash,{kind:'patch',patch});
+  saveCache(data);
+}
+
 const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function fmtDate(iso){
@@ -682,7 +730,8 @@ function showAddModal(){
     </div>
   </div></div>`;
 
-  const close=()=>md.innerHTML='';
+  // Al cerrar (botón o tocando fuera) se repinta la lista con los cambios ya aplicados
+  const close=()=>{md.innerHTML='';render();};
   md.querySelector('#mClose').onclick=close;
   md.querySelector('#mbg').onclick=e=>{if(e.target===md.querySelector('#mbg'))close();};
   document.getElementById('mname').onkeydown=e=>{if(e.key==='Enter')document.getElementById('mAdd').click();};
@@ -737,16 +786,17 @@ function showAddModal(){
           <p style="font-size:14px;text-align:center;margin:0">Envía este código a <b>${esc(name)}</b>.</p>
           ${extra}`;
         btn.classList.add('hidden');
-        // Update list and close modal when user clicks Cerrar
+        // Actualizar la lista al momento (sin esperar a que el servidor lo refleje)
+        if(!data.codes) data.codes=[];
+        const rec=d.record||{label:name,status:'pending',code:d.code,codeHash:d.codeHash,deviceId:null,deviceInfo:null,usedAt:null,createdAt:new Date().toISOString()};
+        if(d.reactivated){
+          patchLocal(rec.codeHash,{status:'pending',deviceId:null,deviceInfo:null,usedAt:null});
+        }else if(rec.codeHash && !data.codes.some(c=>c.codeHash===rec.codeHash)){
+          data.codes.push(rec);
+          if(!d.alreadyExists) markPending(rec.codeHash,{kind:'add',rec});
+          saveCache(data);
+        }
         document.getElementById('mClose').textContent='Cerrar';
-        document.getElementById('mClose').onclick=()=>{
-          if(!d.alreadyExists && !d.reactivated){
-            if(!data.codes) data.codes=[];
-            data.codes.push({label:name,status:'pending',code:d.code,codeHash:d.codeHash,deviceId:null,usedAt:null,createdAt:new Date().toISOString()});
-          }
-          md.innerHTML='';
-          render();
-        };
       }else{
         err.textContent=d.error||'Error al generar';btn.disabled=false;btn.textContent='Generar código';
       }
@@ -794,7 +844,7 @@ function showRevokeModal(codeHash,label){
         method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
         body:JSON.stringify({codeHash})
       });
-      if((await r.json()).ok){await loadData();return null;}
+      if((await r.json()).ok){patchLocal(codeHash,{status:'revoked'});render();loadData();return null;}
       return 'No se pudo revocar. Inténtalo de nuevo.';
     }
   });
@@ -810,7 +860,7 @@ function showReactivateModal(codeHash,label){
         method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
         body:JSON.stringify({codeHash})
       });
-      if((await r.json()).ok){await loadData();return null;}
+      if((await r.json()).ok){patchLocal(codeHash,{status:'pending',deviceId:null,deviceInfo:null,usedAt:null});render();loadData();return null;}
       return 'No se pudo reactivar. Inténtalo de nuevo.';
     }
   });
@@ -826,7 +876,7 @@ function showDeleteModal(codeHash,label){
         method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+secret},
         body:JSON.stringify({codeHash})
       });
-      if((await r.json()).ok){data.codes=data.codes.filter(c=>c.codeHash!==codeHash);saveCache(data);render();return null;}
+      if((await r.json()).ok){data.codes=data.codes.filter(c=>c.codeHash!==codeHash);markPending(codeHash,{kind:'del'});saveCache(data);render();return null;}
       return 'No se pudo eliminar. Inténtalo de nuevo.';
     }
   });
@@ -846,7 +896,7 @@ async function loadData(){
     if(r.status===401||r.status===403){
       sessionStorage.removeItem('_adm');sessionStorage.removeItem('_adm_cache');secret='';data=null;render();return;
     }
-    if(r.ok){data=await r.json();saveCache(data);}
+    if(r.ok){data=await r.json();data.codes=applyPending(data.codes,true);saveCache(data);}
     if(rf.ok){const fd=await rf.json();feedbacks=fd.feedbacks||[];}
     if(ru&&ru.ok){const ud=await ru.json();setUploads(ud.uploads||[]);}
     render();

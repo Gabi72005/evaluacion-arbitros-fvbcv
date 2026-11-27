@@ -481,9 +481,34 @@ async function handleLogPdf(request, env) {
   return json({ ok: true }, 200, env);
 }
 
+// ── Altas recientes ───────────────────────────────────────────────────────────
+// KV.list() es eventualmente consistente: una clave nueva puede tardar ~60 s en
+// aparecer. Guardamos los hashes añadidos en los últimos minutos en una clave
+// aparte (un get sí ve la escritura al momento) y los unimos al listado.
+const RECENT_KEY = 'idx:recent';
+const RECENT_MS = 5 * 60 * 1000;
+
+async function rememberRecent(env, hash) {
+  try {
+    const now = Date.now();
+    const list = (await env.EVAL_KV.get(RECENT_KEY, 'json')) || [];
+    const kept = list.filter(e => e && e.h !== hash && now - e.t < RECENT_MS);
+    kept.push({ h: hash, t: now });
+    await env.EVAL_KV.put(RECENT_KEY, JSON.stringify(kept.slice(-200)));
+  } catch {}
+}
+
 async function handleAdminData(env) {
-  const cl = await env.EVAL_KV.list({ prefix: 'c:' });
-  const records = (await Promise.all(cl.keys.map(k => env.EVAL_KV.get(k.name, 'json')))).filter(Boolean);
+  const [cl, recent] = await Promise.all([
+    env.EVAL_KV.list({ prefix: 'c:' }),
+    env.EVAL_KV.get(RECENT_KEY, 'json').catch(() => null),
+  ]);
+  const names = new Set(cl.keys.map(k => k.name));
+  const now = Date.now();
+  for (const e of (Array.isArray(recent) ? recent : [])) {
+    if (e && e.h && now - e.t < RECENT_MS) names.add(`c:${e.h}`);
+  }
+  const records = (await Promise.all([...names].map(n => env.EVAL_KV.get(n, 'json')))).filter(Boolean);
   const codes = await Promise.all(records.map(async r => ({
     ...r,
     code: await deriveCode(r.label, env.DERIVE_SALT),
@@ -522,9 +547,9 @@ async function handleAddName(request, env) {
       existing.usedAt = null;
       await env.EVAL_KV.put(`c:${hash}`, JSON.stringify(existing));
       await appendAdminLog(env, request, 'code_reactivate', { label: existing.label, codeHash: hash });
-      return json({ ok: true, code, reactivated: true }, 200, env);
+      return json({ ok: true, code, codeHash: hash, reactivated: true, record: { ...existing, code } }, 200, env);
     }
-    return json({ ok: true, code, alreadyExists: true }, 200, env);
+    return json({ ok: true, code, codeHash: hash, alreadyExists: true, record: { ...existing, code } }, 200, env);
   }
 
   const newRecord = {
@@ -538,9 +563,10 @@ async function handleAddName(request, env) {
     createdAt: nowIso(),
   };
   await env.EVAL_KV.put(`c:${hash}`, JSON.stringify(newRecord));
+  await rememberRecent(env, hash);
   await appendAdminLog(env, request, 'code_add', { label: newRecord.label, codeHash: hash });
 
-  return json({ ok: true, code, codeHash: hash }, 200, env);
+  return json({ ok: true, code, codeHash: hash, record: { ...newRecord, code } }, 200, env);
 }
 
 async function handleRevoke(request, env) {
@@ -573,6 +599,7 @@ async function handleCreateFixed(request, env) {
     id: randomHex(8), codeHash: hash, label: label.trim(),
     status: 'active', deviceId: null, deviceInfo: null, usedAt: null, createdAt: nowIso(),
   }));
+  await rememberRecent(env, hash);
   return json({ ok: true, codeHash: hash }, 200, env);
 }
 
