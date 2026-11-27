@@ -765,7 +765,7 @@ async function sendUploadEmail(env, m, replaced) {
   const oneLine = s => String(s ?? '').replace(/[\r\n]+/g, ' ').trim();
   const roleTxt = ROLE_LABELS[m.role] || '—';
   const result = m.passed === true ? 'Supera' : m.passed === false ? 'No supera' : '—';
-  const subject = oneLine(`${replaced ? 'PDF actualizado' : 'Nuevo PDF'}: ${m.aspirant || 'aspirante'} · ${roleTxt}${m.nEval ? ' · ' + m.nEval + 'ª eval.' : ''}`).slice(0, 180);
+  const subject = oneLine(`Evaluación de ${m.aspirant || 'aspirante sin nombre'}`).slice(0, 180);
   const row = (k, v) => `<tr><td style="padding:4px 12px 4px 0;color:#64748b">${k}</td><td style="padding:4px 0"><b>${h(v)}</b></td></tr>`;
   const panel = env.ADMIN_URL ? `<p><a href="${h(env.ADMIN_URL)}">Abrir el panel de administración</a></p>` : '';
   const html = `<div style="font-family:system-ui,Arial,sans-serif;font-size:14px;color:#0f172a">
