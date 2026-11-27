@@ -153,6 +153,8 @@ function validStr(val, maxLen, pattern) {
 }
 
 const VALID_ROLES = new Set(['primero', 'segundo', 'anotador']);
+const VALID_CURSOS = new Set(['nivel1', 'nivel2', 'anotador']); // curso que realiza el aspirante
+const cursoOk = c => c === null || c === undefined || VALID_CURSOS.has(c);
 
 // ── Log size enforcement ──────────────────────────────────────────────────────
 
@@ -407,8 +409,9 @@ async function handleLogPdf(request, env) {
   const body = await parseJsonBody(request);
   if (!body) return json({ ok: false }, 400, env);
 
-  const { token, aspirant, role, examiner, nEval, fecha, passed } = body;
+  const { token, aspirant, role, examiner, nEval, fecha, passed, curso } = body;
   if (!token) return json({ ok: false }, 200, env);
+  if (!cursoOk(curso)) return json({ ok: false, error: 'curso inválido' }, 400, env);
 
   // Validate fields
   if (nEval !== null && nEval !== undefined) {
@@ -438,7 +441,7 @@ async function handleLogPdf(request, env) {
 
   await env.EVAL_KV.put(`l:${Date.now()}-${randomHex(4)}`, JSON.stringify({
     type: 'pdf', label: session.label, deviceId: session.deviceId,
-    aspirant, role, examiner, nEval: nEvalNorm, fecha, passed: passedNorm, timestamp: nowIso(),
+    aspirant, role, examiner, nEval: nEvalNorm, curso: curso || null, fecha, passed: passedNorm, timestamp: nowIso(),
   }), { expirationTtl: 365 * 86400 });
 
   pruneLogIfNeeded(env);
@@ -656,6 +659,7 @@ const UPLOAD_TTL = 365 * 86400;             // se conservan 1 año, igual que la
 const UPLOAD_RL_MAX = 10;                   // subidas por árbitro cada 15 min
 const UPLOAD_ID_RE = /^[0-9a-f]{24}$/;
 const ROLE_LABELS = { primero: '1º árbitro', segundo: '2º árbitro', anotador: 'Anotador' };
+const CURSO_LABELS = { nivel1: 'Nivel 1', nivel2: 'Nivel 2', anotador: 'Anotador' };
 
 const cut = (v, n) => (typeof v === 'string' ? v.slice(0, n) : null);
 
@@ -702,7 +706,8 @@ async function handleUploadPdf(request, env, ctx) {
   }
 
   // Validación de datos (mismas reglas que /log/pdf)
-  const { evId, aspirant, role, examiner, nEval, fecha, passed, fileName } = meta;
+  const { evId, aspirant, role, examiner, nEval, fecha, passed, fileName, curso } = meta;
+  if (!cursoOk(curso)) return json({ ok: false, error: 'curso inválido' }, 400, env);
   if (!validStr(evId, 64, /^[A-Za-z0-9_-]+$/) || !evId) return json({ ok: false, error: 'evId inválido' }, 400, env);
   if (nEval !== null && nEval !== undefined) {
     const n = Number(nEval);
@@ -730,7 +735,7 @@ async function handleUploadPdf(request, env, ctx) {
   const nEvalNorm = (nEval !== null && nEval !== undefined) ? Number(nEval) : null;
   const metadata = {
     label: cut(session.label, 80), aspirant: cut(aspirant, 80), examiner: cut(examiner, 80),
-    role: role || null, nEval: nEvalNorm, fecha: fecha || null,
+    role: role || null, nEval: nEvalNorm, curso: curso || null, fecha: fecha || null,
     passed: passed === true ? true : passed === false ? false : null,
     name: fileName || `Evaluacion_${id}.pdf`, size: bytes.byteLength, ts: nowIso(),
   };
@@ -741,7 +746,7 @@ async function handleUploadPdf(request, env, ctx) {
   await env.EVAL_KV.put(`upn:${id}`, '1', { expirationTtl: UPLOAD_TTL });
   await env.EVAL_KV.put(`l:${Date.now()}-${randomHex(4)}`, JSON.stringify({
     type: 'upload', label: session.label, deviceId: session.deviceId,
-    aspirant, role, examiner, nEval: nEvalNorm, fecha, passed: metadata.passed, replaced, timestamp: nowIso(),
+    aspirant, role, examiner, nEval: nEvalNorm, curso: curso || null, fecha, passed: metadata.passed, replaced, timestamp: nowIso(),
   }), { expirationTtl: 365 * 86400 });
   pruneLogIfNeeded(env);
 
@@ -765,7 +770,7 @@ async function sendUploadEmail(env, m, replaced) {
   const panel = env.ADMIN_URL ? `<p><a href="${h(env.ADMIN_URL)}">Abrir el panel de administración</a></p>` : '';
   const html = `<div style="font-family:system-ui,Arial,sans-serif;font-size:14px;color:#0f172a">
     <p>${replaced ? 'Se ha <b>actualizado</b> un PDF de evaluación' : 'Se ha subido un <b>nuevo PDF</b> de evaluación'}:</p>
-    <table style="border-collapse:collapse">${row('Árbitro', m.label)}${row('Aspirante', m.aspirant)}${row('Rol', roleTxt)}${row('Nº evaluación', m.nEval ? m.nEval + 'ª' : '—')}${row('Fecha', m.fecha || '—')}${row('Resultado', result)}</table>
+    <table style="border-collapse:collapse">${row('Árbitro', m.label)}${row('Aspirante', m.aspirant)}${row('Curso', CURSO_LABELS[m.curso] || '—')}${row('Rol evaluado', roleTxt)}${row('Nº evaluación', m.nEval ? m.nEval + 'ª' : '—')}${row('Fecha', m.fecha || '—')}${row('Resultado', result)}</table>
     ${panel}<p style="color:#64748b;font-size:12px">Lo tienes en la pestaña «PDFs» del panel.</p></div>`;
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',

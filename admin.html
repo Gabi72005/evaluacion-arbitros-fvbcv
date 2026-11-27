@@ -489,7 +489,7 @@ function tabActividad(logs){
     <thead><tr><th>Tipo</th><th>Árbitro</th><th class="hide">Detalles</th><th>Fecha</th><th style="width:36px"></th></tr></thead>
     <tbody>${slice.map(l=>`<tr>
       <td>${l.type==='pdf'?'<span class="pill ok">PDF</span>':l.type==='upload'?'<span class="pill" style="background:#fef3c7;color:#92400e">Enviado</span>':'<span class="pill na">Login</span>'}</td>
-      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'||l.type==='upload'?`<div class="ts" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">${esc(l.aspirant||'')} · ${fmtRole(l.role)}${l.nEval?' · Eval. '+esc(String(l.nEval))+'ª':''}${l.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px 2px 5px">Supera</span>':l.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px 2px 5px">No supera</span>':''}</div>`:''}
+      <td><b>${esc(l.label||'—')}</b>${l.type==='pdf'||l.type==='upload'?`<div class="ts" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">${esc(l.aspirant||'')}${l.curso?' ('+esc(fmtCurso(l.curso))+')':''} · ${fmtRole(l.role)}${l.nEval?' · Eval. '+esc(String(l.nEval))+'ª':''}${l.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px 2px 5px">Supera</span>':l.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px 2px 5px">No supera</span>':''}</div>`:''}
           ${l.type==='login'&&l.deviceInfo?`<div class="ts">${parseBrowser(l.deviceInfo.ua)}</div>`:''}</td>
       <td class="hide">${l.type==='pdf'||l.type==='upload'?`<span class="ts">Examinador: ${esc(l.examiner||'—')}</span>`:''}
           ${l.type==='login'?`<div class="ts">${[l.city,l.country].filter(Boolean).join(', ')||'—'}${l.deviceInfo?` · ${esc(l.deviceInfo.tz||'')}`:''}</div>`:''}</td>
@@ -857,6 +857,7 @@ async function loadData(){
 }
 
 /* ---- PDFs ENVIADOS POR LOS ÁRBITROS ---- */
+const fmtCurso=c=>({nivel1:'Nivel 1',nivel2:'Nivel 2',anotador:'Anotador'})[c]||'';
 function setUploads(list){
   uploads=list;
   const ids=new Set(list.map(u=>u.id));
@@ -902,7 +903,7 @@ function tabPdfs(){
           ${u.isNew?'<span class="pill" style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 6px">Nuevo</span>':''}
           ${u.passed===true?'<span class="pill ok" style="font-size:10px;padding:2px 6px">Supera</span>':u.passed===false?'<span class="pill ko" style="font-size:10px;padding:2px 6px">No supera</span>':''}
         </div>
-        <div class="ts" style="margin-top:2px">${fmtRole(u.role)}${u.nEval?' · '+esc(String(u.nEval))+'ª eval.':''}${u.fecha?' · Partido '+esc(u.fecha.split('-').reverse().join('/')):''}</div>
+        <div class="ts" style="margin-top:2px">${u.curso?'Curso '+esc(fmtCurso(u.curso))+' · ':''}${fmtRole(u.role)}${u.nEval?' · '+esc(String(u.nEval))+'ª eval.':''}${u.fecha?' · Partido '+esc(u.fecha.split('-').reverse().join('/')):''}</div>
         <div class="ts">Enviado por <b>${esc(u.label||'—')}</b> · ${fmtDate(u.ts)} · ${fmtSize(u.size)}</div>
       </div>
       <button class="btn sec" data-updl="${esc(u.id)}" style="flex:none;padding:7px 10px;font-size:12px" title="Descargar este PDF">⬇ PDF</button>

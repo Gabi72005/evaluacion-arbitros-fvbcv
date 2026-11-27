@@ -56,11 +56,15 @@ textarea.t{resize:vertical;min-height:84px}
 .item.apto{border-left:5px solid var(--ok)}
 .item.no{border-left:5px solid var(--ko)}
 .item .lbl{font-weight:650;font-size:15px;margin-bottom:10px}
-.choice{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
+.choice{display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px}
 .choice button{border:1.5px solid var(--line);background:#fff;border-radius:11px;height:46px;font-weight:700;font-size:15px}
 .choice .a.on{background:var(--ok);border-color:var(--ok);color:#fff}
 .choice .n.on{background:var(--ko);border-color:var(--ko);color:#fff}
 .choice .o{width:52px;font-size:19px;color:var(--mute)}
+.choice .x{width:48px;font-size:12px;color:var(--mute)}
+.choice .x.on{background:#64748b;border-color:#64748b;color:#fff}
+.item.na{border-left:5px solid #94a3b8;background:#f8fafc}
+.item.na .lbl{color:var(--mute)}
 .choice .o.has{color:var(--blue);border-color:var(--blue);background:var(--blue-l)}
 .item textarea{margin-top:10px;min-height:60px}
 .obsprev{margin-top:8px;font-size:13px;color:var(--mute);font-style:italic}
@@ -188,7 +192,7 @@ const PAGE_H = 841.92, ANNEX_PAGE = 3;
 const WORKER_URL='https://eval-arbitros-fvbcv.fvbcv-eval.workers.dev';
 function getDeviceId(){let id=localStorage.getItem('_did');if(!id){id=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);localStorage.setItem('_did',id);}return id;}
 function getDeviceInfo(){try{return{ua:navigator.userAgent.slice(0,200),screen:screen.width+'x'+screen.height,lang:navigator.language,tz:Intl.DateTimeFormat().resolvedOptions().timeZone};}catch(e){return{};}}
-function logPdfExport(ev){const token=localStorage.getItem('_session');if(!token)return;const g=globalStats(ev);fetch(WORKER_URL+'/log/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,aspirant:ev.aspirant,role:ev.role,examiner:ev.examiner,nEval:ev.nEval,fecha:ev.fecha,passed:g?g.pass:null})}).catch(()=>{});}
+function logPdfExport(ev){const token=localStorage.getItem('_session');if(!token)return;const g=globalStats(ev);fetch(WORKER_URL+'/log/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,aspirant:ev.aspirant,role:ev.role,examiner:ev.examiner,nEval:ev.nEval,curso:ev.curso||null,fecha:ev.fecha,passed:g?g.pass:null})}).catch(()=>{});}
 function renderLogin(err){
   document.getElementById('app').innerHTML=`<header class="top"><img src="fvbcv-logo.png" alt="FVBCV" style="height:36px;width:36px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px"><h1>Evaluación Árbitros<span class="sub">FVBCV · Acceso privado</span></h1></header>
   <main style="display:grid;place-items:center;min-height:calc(100vh - 64px);padding:14px">
@@ -302,10 +306,12 @@ const S={view:'home', cur:null, tab:'datos', open:{}};
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const fmtDate=s=>{if(!s)return'';const [y,m,d]=s.split('-');return `${d}/${m}/${y}`};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CURSOS={nivel1:'Nivel 1',nivel2:'Nivel 2',anotador:'Anotador'};
+const cursoText=ev=>CURSOS[ev.curso]||'';
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 function newEval(){
-  return {id:uid(),created:Date.now(),updated:Date.now(),status:'draft',examiner:localStorage.getItem('_session_label')||mem.examiner||'',aspirant:'',role:'',partido:'',categoria:'',genero:'',nivel:'',fecha:today(),items:{},comments:'',nEval:'',nEvalAuto:true};
+  return {id:uid(),created:Date.now(),updated:Date.now(),status:'draft',examiner:localStorage.getItem('_session_label')||mem.examiner||'',aspirant:'',role:'',partido:'',categoria:'',genero:'',nivel:'',curso:'',fecha:today(),items:{},comments:'',nEval:'',nEvalAuto:true};
 }
 function getEval(id){return mem.evals.find(e=>e.id===id)}
 const normName=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
@@ -320,10 +326,11 @@ function save(){ if(!S.cur)return; S.cur.updated=Date.now(); const i=mem.evals.f
 
 /* ---------- Cálculo ---------- */
 function secStats(ev,sec){
-  let ap=0,no=0; sec.items.forEach((_,i)=>{const v=(ev.items[sec.key+'.'+i]||{}).v; if(v==='apto')ap++; else if(v==='no')no++;});
-  const total=sec.items.length, pending=total-ap-no;
-  const pass=ap>=sec.min, fail=(total-no)<sec.min;
-  return {ap,no,total,pending,pass,fail,state: pass?'ok':(fail?'ko':(pending?'na':'ko'))};
+  let ap=0,no=0,na=0; sec.items.forEach((_,i)=>{const v=(ev.items[sec.key+'.'+i]||{}).v; if(v==='apto')ap++; else if(v==='no')no++; else if(v==='na')na++;});
+  // N/A: el ítem no cuenta y cada N/A resta 1 al mínimo de aptos del bloque
+  const total=sec.items.length-na, pending=total-ap-no, min=Math.max(0,sec.min-na);
+  const pass=ap>=min, fail=(total-no)<min;
+  return {ap,no,na,total,min,pending,pass,fail,state: pass?'ok':(fail?'ko':(pending?'na':'ko'))};
 }
 function globalStats(ev){
   const r=ROLES[ev.role]; if(!r) return null;
@@ -413,6 +420,9 @@ function viewDatos(ev){
     <input class="t" id="f_aspirant" data-f="aspirant" value="${esc(ev.aspirant)}" placeholder="Nombre y apellidos" list="dl_asp" autocomplete="off">
     <datalist id="dl_asp">${knownAspirants().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
     <div id="prevBox">${prevBoxHtml(ev)}</div>
+    <label class="f" for="f_curso">Curso que realiza el aspirante</label>
+    <select class="t" id="f_curso" data-f="curso"><option value="" ${ev.curso?'':'selected'}>Elegir…</option>${Object.entries(CURSOS).map(([k,l])=>`<option value="${k}" ${ev.curso===k?'selected':''}>${l}</option>`).join('')}</select>
+    <div class="hint">Independiente del rol que se evalúa. Sale en el PDF.</div>
     <label class="f" for="f_nEval">Nº de evaluación de este aspirante</label>
     ${nEvalSel(ev)}
     <div class="hint" id="nEvalHint">${ev.nEvalAuto!==false&&ev.aspirant.trim()?'Calculado según tu historial. Puedes cambiarlo.':'Sale en el PDF y en el nombre del archivo.'}</div>
@@ -449,7 +459,7 @@ const catText=ev=>[ev.categoria,ev.genero].filter(Boolean).join(' ');
 function viewSection(ev,r,sec){
   const st=secStats(ev,sec);
   const idx=r.sections.indexOf(sec), next=r.sections[idx+1];
-  return `<div class="sec-head"><div><b>${sec.name}</b><div class="meta">${sec.pct} · mínimo ${sec.min} aptos de ${st.total}</div></div>
+  return `<div class="sec-head"><div><b>${sec.name}</b><div class="meta">${sec.pct} · mínimo ${st.min} aptos de ${st.total}${st.na?` · ${st.na} N/A`:''}</div></div>
     <span class="pill ${st.state}">${st.ap}/${st.total} · ${st.pass?'SUPERA':(st.fail?'NO SUPERA':'pendiente')}</span></div>
   <div class="bulk"><button data-bulk="apto">Marcar pendientes como APTO</button><button data-bulk="clear">Limpiar bloque</button></div>
   ${sec.items.map(([lbl],i)=>{
@@ -459,6 +469,7 @@ function viewSection(ev,r,sec){
       <div class="choice">
         <button class="a ${it.v==='apto'?'on':''}" data-set="${k}" data-v="apto">APTO</button>
         <button class="n ${it.v==='no'?'on':''}" data-set="${k}" data-v="no">NO APTO</button>
+        <button class="x ${it.v==='na'?'on':''}" data-set="${k}" data-v="na" title="No aplica">N/A</button>
         <button class="o ${it.obs?'has':''}" data-obs="${k}" aria-label="Observación">✎</button>
       </div>
       ${open?`<textarea class="t" data-obstext="${k}" placeholder="Observaciones (opcional)">${esc(it.obs||'')}</textarea>`:(it.obs?`<div class="obsprev">“${esc(it.obs)}”</div>`:'')}
@@ -468,6 +479,7 @@ function viewSection(ev,r,sec){
 function viewFinal(ev,r,g){
   const missing=[];
   if(!ev.aspirant.trim())missing.push({label:'nombre del aspirante',jump:'datos:aspirant'});
+  if(!ev.curso)missing.push({label:'curso del aspirante',jump:'datos:curso'});
   // Build pending items list for U3
   const pendingItems=[];
   r.sections.forEach(sec=>{
@@ -480,7 +492,7 @@ function viewFinal(ev,r,g){
   return `${pendingItems.length?`<div class="warn">Quedan <b>${pendingItems.length}</b> ítem${pendingItems.length!==1?'s':''} sin marcar. Saldrán en blanco en el PDF.<br><span style="font-size:13px">${shown.map(p=>`<a href="#" data-jump="${esc(p.tab)}:${esc(p.key)}" style="color:var(--blue);text-decoration:underline;margin-right:10px">${esc(p.text)}</a>`).join('')}${more>0?`<span style="color:var(--mute)">y ${more} más</span>`:''}</span></div>`:''}
   ${missing.length?`<div class="warn">Falta: ${missing.map(m=>`<a href="#" data-jump="${esc(m.jump)}" style="color:var(--blue);text-decoration:underline">${esc(m.label)}</a>`).join(', ')} (pestaña Datos).</div>`:''}
   <div class="card summary"><h2>Resumen · ${r.name}</h2>
-    ${r.sections.map((s,i)=>{const st=g.secs[i];return `<div class="r"><div><b>${s.name}</b><div class="hint" style="margin:0">${st.ap} aptos · ${st.no} no aptos${st.pending?' · '+st.pending+' sin marcar':''} · mín. ${s.min}</div></div><span class="pill ${st.state}">${st.pass?'SUPERA':(st.fail?'NO SUPERA':'pendiente')}</span></div>`}).join('')}
+    ${r.sections.map((s,i)=>{const st=g.secs[i];return `<div class="r"><div><b>${s.name}</b><div class="hint" style="margin:0">${st.ap} aptos · ${st.no} no aptos${st.na?' · '+st.na+' N/A':''}${st.pending?' · '+st.pending+' sin marcar':''} · mín. ${st.min}</div></div><span class="pill ${st.state}">${st.pass?'SUPERA':(st.fail?'NO SUPERA':'pendiente')}</span></div>`}).join('')}
     <div class="r"><b>Resultado global</b><span class="big" style="color:${g.pass?'var(--ok)':'var(--ko)'}">${g.pass?'SUPERA':'NO SUPERA'}</span></div>
     <div class="hint">Supera si alcanza el mínimo de aptos en los ${g.n} bloques (${g.passed}/${g.n}).</div>
   </div>
@@ -489,7 +501,8 @@ function viewFinal(ev,r,g){
     <textarea class="t" data-f="comments" rows="12" placeholder="Valoración general del partido, puntos fuertes, aspectos a mejorar, recomendación…">${esc(ev.comments)}</textarea>
   </div>
   <div class="stack">
-    <button class="btn pri" id="genPdf">${lastPdf&&lastPdf.id===ev.id?'Volver a descargar PDF':'Descargar PDF'+(ev.status==='done'?'':' y finalizar')}</button>
+    ${ev.curso?'':'<div class="hint" style="text-align:center;color:var(--ko)">Elige el curso del aspirante en Datos para poder descargar el PDF.</div>'}
+    <button class="btn pri" id="genPdf"${ev.curso?'':' disabled'}>${lastPdf&&lastPdf.id===ev.id?'Volver a descargar PDF':'Descargar PDF'+(ev.status==='done'?'':' y finalizar')}</button>
     ${lastPdf&&lastPdf.id===ev.id&&!dlNs?(canShareFile(lastPdf.file)
       ?'<button class="btn sec" id="sharePdf">↗ Compartir PDF (WhatsApp, correo…)</button>'
       :'<div class="hint" style="text-align:center">PDF descargado. Para enviarlo, ábrelo desde Descargas y compártelo.</div>'):''}
@@ -537,7 +550,7 @@ function bindEval(ev,r){
         const allItems=[...document.querySelectorAll('.item')];
         const cur=document.getElementById('it_'+k.replace('.','_'));
         const curIdx=cur?allItems.indexOf(cur):-1;
-        const next=allItems.slice(curIdx+1).find(el=>!el.classList.contains('apto')&&!el.classList.contains('no'));
+        const next=allItems.slice(curIdx+1).find(el=>!el.classList.contains('apto')&&!el.classList.contains('no')&&!el.classList.contains('na'));
         if(next){next.scrollIntoView({behavior:'smooth',block:'center'});}
         else{const nx=document.querySelector('[data-goto]');if(nx)nx.scrollIntoView({behavior:'smooth',block:'center'});}
       },150);
@@ -553,7 +566,7 @@ function bindEval(ev,r){
       if(b.dataset.bulk==='apto'){if(!it.v)it.v='apto';} else {it.v=null;}});
     save();render();});
   const gen=document.getElementById('genPdf');
-  if(gen) gen.onclick=async()=>{ev.status='done';save();await exportPdf(ev,true);};
+  if(gen) gen.onclick=async()=>{if(!ev.curso)return;ev.status='done';save();await exportPdf(ev,true);};
   const sh=document.getElementById('sharePdf'); if(sh) sh.onclick=sharePdf;
   const up=document.getElementById('uploadPdf'); if(up) up.onclick=()=>uploadPdf(ev,up);
   const re=document.getElementById('reopen'); if(re) re.onclick=()=>{ev.status='draft';save();render();};
@@ -642,7 +655,7 @@ async function buildPdf(ev){
   const INK=rgb(.05,.15,.42), BLUE=rgb(.11,.37,.66), RED=rgb(.86,.15,.15), OK=rgb(.09,.52,.29), KO=rgb(.78,.18,.18),
         GREY=rgb(.35,.38,.42), LINE=rgb(.62,.65,.70), HEAD=rgb(.92,.94,.97), OBSBG=rgb(.965,.972,.985), WHITE=rgb(1,1,1), BLACK=rgb(0,0,0);
   const X0=45, X1=550, W=X1-X0, TOP=126, BOTTOM=792;
-  const C_AP=[380,465], C_NO=[465,550]; // columnas APTO / NO APTO
+  const C_AP=[352,430], C_NO=[430,508], C_NA=[508,550]; // columnas APTO / NO APTO / N/A
   let pg=null, y=0; const pages=[];
   const Y=v=>PAGE_H-v;
   async function newPage(){
@@ -665,9 +678,10 @@ async function buildPdf(ev){
   const nEv=ev.nEval?ordinal(ev.nEval)+' evaluación':'-';
   const data=[
     [['ASPIRANTE',ev.aspirant],['EVALUACIÓN Nº',nEv]],
+    [['CURSO',cursoText(ev)],['ROL EVALUADO',r.name]],
     [['PARTIDO',ev.partido],['FECHA',fmtDate(ev.fecha)]],
     [['CATEGORÍA',catText(ev)],['NIVEL DEL PARTIDO',ev.nivel]],
-    [['EXAMINADOR',ev.examiner],['ROL EVALUADO',r.name]]
+    [['EXAMINADOR',ev.examiner]]
   ];
   const RH=17, colW=[W*0.62,W*0.38], LW=[78,92];
   data.forEach((row,ri)=>{
@@ -675,7 +689,8 @@ async function buildPdf(ev){
     row.forEach(([lab,val],ci)=>{
       rect(x,y,LW[ci],RH,{color:HEAD});
       text(lab,x+4,y+11.5,FB,7,GREY);
-      const v=clean(val||'-'); const vw=colW[ci]-LW[ci]-8;
+      const cw=row.length===1?W:colW[ci]; // una sola celda: ocupa todo el ancho
+      const v=clean(val||'-'); const vw=cw-LW[ci]-8;
       const bold=ci===0&&ri===0;
       const s=fit(v,bold?FB:F,bold?10:9,vw);
       text(v,x+LW[ci]+5,y+12,bold?FB:F,s,INK);
@@ -685,7 +700,9 @@ async function buildPdf(ev){
   });
   rect(X0,y-RH*data.length,W,RH*data.length,{borderColor:LINE,borderWidth:.7});
   for(let i=1;i<data.length;i++)hline(X0,X1,y-RH*i);
-  vline(X0+colW[0],y-RH*data.length,y); vline(X0+LW[0],y-RH*data.length,y); vline(X0+colW[0]+LW[1],y-RH*data.length,y);
+  data.forEach((row,ri)=>{const y0=y-RH*(data.length-ri), y1=y0+RH;
+    vline(X0+LW[0],y0,y1);
+    if(row.length>1){vline(X0+colW[0],y0,y1); vline(X0+colW[0]+LW[1],y0,y1);}});
   y+=16;
 
   // Bloques
@@ -694,13 +711,13 @@ async function buildPdf(ev){
   const secHeader=async(sec,st,cont)=>{
     await ensure(20+IH+IH);
     text(sec.name.toUpperCase()+(cont?' (cont.)':''),X0,y+12,FB,9.5,RED);
-    text(`${sec.pct} - MÍNIMO ${sec.min} APTOS`,X0+FB.widthOfTextAtSize(sec.name.toUpperCase()+(cont?' (cont.)':''),9.5)+14,y+12,FB,8.5,RED);
-    const res=`${st.ap}/${st.total} APTOS - ${st.pass?'SUPERA':'NO SUPERA'}`, rs=8.5, rw=FB.widthOfTextAtSize(res,rs)+12;
+    text(`${sec.pct} - MÍNIMO ${st.min} APTOS`,X0+FB.widthOfTextAtSize(sec.name.toUpperCase()+(cont?' (cont.)':''),9.5)+14,y+12,FB,8.5,RED);
+    const res=`${st.ap}/${st.total} APTOS${st.na?` (${st.na} N/A)`:''} - ${st.pass?'SUPERA':'NO SUPERA'}`, rs=8.5, rw=FB.widthOfTextAtSize(res,rs)+12;
     rect(X1-rw,y+2,rw,14,{color:st.pass?OK:KO}); text(res,X1-rw+6,y+12.2,FB,rs,WHITE);
     y+=20;
     rect(X0,y,W,IH,{color:HEAD,borderColor:LINE,borderWidth:.6});
     text('ÍTEM',X0+5,y+11,FB,7.5,GREY);
-    [['APTO',C_AP],['NO APTO',C_NO]].forEach(([t,[a,b]])=>{vline(a,y,y+IH);text(t,(a+b)/2-FB.widthOfTextAtSize(t,7.5)/2,y+11,FB,7.5,GREY);});
+    [['APTO',C_AP],['NO APTO',C_NO],['N/A',C_NA]].forEach(([t,[a,b]])=>{vline(a,y,y+IH);text(t,(a+b)/2-FB.widthOfTextAtSize(t,7.5)/2,y+11,FB,7.5,GREY);});
     y+=IH;
   };
   for(let si=0;si<r.sections.length;si++){
@@ -719,6 +736,7 @@ async function buildPdf(ev){
       text(clean(lbl).toUpperCase(),X0+5,y+11,F,fit(clean(lbl).toUpperCase(),F,8,C_AP[0]-X0-10),BLACK);
       if(it.v==='apto') cross((C_AP[0]+C_AP[1])/2,y+IH/2,INK);
       if(it.v==='no') cross((C_NO[0]+C_NO[1])/2,y+IH/2,KO);
+      if(it.v==='na') cross((C_NA[0]+C_NA[1])/2,y+IH/2,GREY);
       y+=IH;
       if(oh){
         rect(X0,y,W,oh,{color:OBSBG});
@@ -731,7 +749,7 @@ async function buildPdf(ev){
       }
       // bordes de la fila (ítem + observación)
       rect(X0,y0,W,y-y0,{borderColor:LINE,borderWidth:.6});
-      vline(C_AP[0],y0,y0+IH); vline(C_NO[0],y0,y0+IH);
+      vline(C_AP[0],y0,y0+IH); vline(C_NO[0],y0,y0+IH); vline(C_NA[0],y0,y0+IH);
     }
     y+=14;
   }
@@ -751,7 +769,7 @@ async function buildPdf(ev){
     rect(X0,y,W,18,{borderColor:LINE,borderWidth:.6});
     text(sec.name,SC[0]+6,y+12.5,F,9.5,BLACK);
     text(`${st.ap} / ${st.total}`,SC[1]+6,y+12.5,F,9.5,INK);
-    text(`${sec.min} (${sec.pct})`,SC[2]+6,y+12.5,F,9.5,INK);
+    text(`${st.min} (${sec.pct})`,SC[2]+6,y+12.5,F,9.5,INK);
     text(st.pass?'SUPERA':'NO SUPERA',SC[3]+6,y+12.5,FB,9.5,st.pass?OK:KO);
     y+=18;});
   y+=12;
@@ -834,7 +852,7 @@ async function uploadPdf(ev,btn){
     const bytes=await buildPdf(ev), name=fileName(ev), g=globalStats(ev);
     const fd=new FormData();
     fd.append('token',token);
-    fd.append('meta',JSON.stringify({evId:String(ev.id),aspirant:ev.aspirant||null,role:ev.role,examiner:ev.examiner||null,nEval:ev.nEval||null,fecha:ev.fecha||null,passed:g?g.pass:null,fileName:name}));
+    fd.append('meta',JSON.stringify({evId:String(ev.id),aspirant:ev.aspirant||null,role:ev.role,examiner:ev.examiner||null,nEval:ev.nEval||null,curso:ev.curso||null,fecha:ev.fecha||null,passed:g?g.pass:null,fileName:name}));
     fd.append('file',new Blob([bytes],{type:'application/pdf'}),name);
     const ctrl=new AbortController(), tid=setTimeout(()=>ctrl.abort(),30000);
     const r=await fetch(WORKER_URL+'/upload/pdf',{method:'POST',body:fd,signal:ctrl.signal});
