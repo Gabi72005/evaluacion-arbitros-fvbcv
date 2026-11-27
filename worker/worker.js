@@ -745,7 +745,7 @@ async function handleUploadPdf(request, env, ctx) {
   }), { expirationTtl: 365 * 86400 });
   pruneLogIfNeeded(env);
 
-  const mail = sendUploadEmail(env, metadata, replaced).catch(() => {});
+  const mail = sendUploadEmail(env, metadata, replaced).catch(e => console.error('Aviso por correo fallido', e));
   if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(mail); else await mail;
 
   return json({ ok: true, replaced }, 200, env);
@@ -753,7 +753,9 @@ async function handleUploadPdf(request, env, ctx) {
 
 // Aviso por correo con Resend (gratis hasta 3.000/mes). Si faltan las variables, no hace nada.
 async function sendUploadEmail(env, m, replaced) {
-  if (!env.RESEND_API_KEY || !env.NOTIFY_EMAIL) return;
+  // NOTIFY_EMAIL admite uno o varios correos separados por comas
+  const to = String(env.NOTIFY_EMAIL || '').split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)).slice(0, 10);
+  if (!env.RESEND_API_KEY || !to.length) return;
   const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const oneLine = s => String(s ?? '').replace(/[\r\n]+/g, ' ').trim();
   const roleTxt = ROLE_LABELS[m.role] || '—';
@@ -765,14 +767,16 @@ async function sendUploadEmail(env, m, replaced) {
     <p>${replaced ? 'Se ha <b>actualizado</b> un PDF de evaluación' : 'Se ha subido un <b>nuevo PDF</b> de evaluación'}:</p>
     <table style="border-collapse:collapse">${row('Árbitro', m.label)}${row('Aspirante', m.aspirant)}${row('Rol', roleTxt)}${row('Nº evaluación', m.nEval ? m.nEval + 'ª' : '—')}${row('Fecha', m.fecha || '—')}${row('Resultado', result)}</table>
     ${panel}<p style="color:#64748b;font-size:12px">Lo tienes en la pestaña «PDFs» del panel.</p></div>`;
-  await fetch('https://api.resend.com/emails', {
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from: env.NOTIFY_FROM || 'FVBCV Evaluaciones <onboarding@resend.dev>',
-      to: [env.NOTIFY_EMAIL], subject, html,
+      to, subject, html,
     }),
   });
+  // Si Resend rechaza el envío (clave mala, destinatario no permitido…) queda en los logs del Worker
+  if (!res.ok) console.error('Resend error', res.status, (await res.text().catch(() => '')).slice(0, 300));
 }
 
 async function handleAdminUploads(env) {

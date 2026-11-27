@@ -52,8 +52,8 @@ Versión publicada en Claude: https://claude.ai/artifact/3MRLptUfkEszo8PoibhbLy 
    ```bash
    cd worker
    npx wrangler secret put RESEND_API_KEY
-   npx wrangler secret put NOTIFY_EMAIL      # el mismo correo de la cuenta de Resend
+   npx wrangler secret put NOTIFY_EMAIL      # uno o varios, separados por comas
    npx wrangler secret put ADMIN_URL         # p. ej. https://evaluacion-arbitros-fvbcv.pages.dev/admin
    ```
-   Sin dominio propio, Resend envía desde `onboarding@resend.dev` y **solo al correo con el que se creó la cuenta**, que es justo el de la admin. Con un dominio verificado se puede fijar `NOTIFY_FROM`.
+   Sin dominio propio, Resend envía desde `onboarding@resend.dev` y **solo al correo con el que se creó la cuenta**, que es justo el de la admin. Con un dominio verificado en Resend se puede enviar a cualquier correo y fijar `NOTIFY_FROM`. Si el aviso falla, el motivo aparece en los logs del Worker (`npx wrangler tail`).
 3. Actualizar las guías PDF (árbitros y administración) con el nuevo botón y la pestaña PDFs.
