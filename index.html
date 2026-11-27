@@ -377,10 +377,21 @@ function renderHome(){
   </main>`;
   document.getElementById('newBtn').onclick=()=>{S.cur=newEval();S.tab='datos';S.open={};S.view='eval';render();window.scrollTo(0,0)};
   document.getElementById('fbBtn').onclick=()=>openFeedbackModal();
-  document.getElementById('logoutBtn').onclick=()=>{
+  document.getElementById('logoutBtn').onclick=async()=>{
+    const btn=document.getElementById('logoutBtn'); btn.disabled=true;
     stopSessionWatch();
+    // Avisar al servidor para que libere el dispositivo (así se puede entrar luego desde otro)
+    const token=localStorage.getItem('_session'); let released=true;
+    if(token){
+      try{
+        const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),6000);
+        const r=await fetch(WORKER_URL+'/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token}),signal:ctl.signal,keepalive:true});
+        clearTimeout(tm); released=r.ok;
+      }catch{released=false;}
+    }
     localStorage.removeItem('_session');localStorage.removeItem('_master');localStorage.removeItem('_session_label');
     renderLogin();
+    if(!released) toast('Sesión cerrada en este dispositivo','Sin conexión: para entrar desde otro dispositivo, vuelve a entrar aquí con conexión y pulsa Salir');
   };
   $app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{S.cur=getEval(b.dataset.open);S.tab=S.cur.status==='done'?'final':'datos';S.open={};S.view='eval';render();window.scrollTo(0,0)});
   $app.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>exportPdf(getEval(b.dataset.pdf)));

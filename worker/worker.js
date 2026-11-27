@@ -183,6 +183,7 @@ export default {
 
     if (path === '/auth/validate'  && request.method === 'POST') return handleValidate(request, env);
     if (path === '/auth/verify'    && request.method === 'POST') return handleVerify(request, env);
+    if (path === '/auth/logout'    && request.method === 'POST') return handleLogout(request, env);
     if (path === '/log/pdf'        && request.method === 'POST') return handleLogPdf(request, env);
     if (path === '/feedback'       && request.method === 'POST') return handleFeedback(request, env);
     if (path === '/upload/pdf'     && request.method === 'POST') return handleUploadPdf(request, env, ctx);
@@ -342,6 +343,10 @@ async function handleValidate(request, env) {
     record.deviceId = deviceId;
     record.deviceInfo = deviceInfo;
     record.usedAt = ts;
+  } else if (!record.deviceId && !record.multiDevice) {
+    // El árbitro cerró sesión (dispositivo liberado): el código pasa a este dispositivo
+    record.deviceId = deviceId;
+    record.deviceInfo = deviceInfo;
   }
   // Always refresh last-login metadata so the admin sees current device & timestamp
   record.lastLogin = ts;
@@ -408,6 +413,28 @@ async function handleVerify(request, env) {
   await env.EVAL_KV.put(`s:${token}`, JSON.stringify(session), { expirationTtl: 180 * 86400 });
 
   return json({ ok: true, label: session.label }, 200, env);
+}
+
+// Cerrar sesión: borra la sesión y libera el dispositivo vinculado al código,
+// para que el árbitro pueda entrar después desde otro dispositivo.
+async function handleLogout(request, env) {
+  const body = await parseJsonBody(request);
+  const token = body && body.token;
+  if (!token || typeof token !== 'string' || token.length > 128) return json({ ok: false }, 400, env);
+
+  const session = await env.EVAL_KV.get(`s:${token}`, 'json');
+  if (!session) return json({ ok: true }, 200, env); // ya estaba cerrada
+  await env.EVAL_KV.delete(`s:${token}`);
+  if (session.masterSession || !session.codeHash) return json({ ok: true }, 200, env);
+
+  const record = await env.EVAL_KV.get(`c:${session.codeHash}`, 'json');
+  // Solo se libera si el código sigue vinculado al dispositivo de esta sesión
+  if (record && record.status === 'active' && record.deviceId === session.deviceId) {
+    record.deviceId = null;
+    record.deviceInfo = null;
+    await env.EVAL_KV.put(`c:${session.codeHash}`, JSON.stringify(record));
+  }
+  return json({ ok: true }, 200, env);
 }
 
 async function handleLogPdf(request, env) {
@@ -559,6 +586,7 @@ async function handleMultiDevice(request, env) {
   record.status = 'active';
   record.deviceId = null;
   record.deviceInfo = null;
+  record.multiDevice = true; // no se vuelve a vincular a un dispositivo al entrar
   await env.EVAL_KV.put(`c:${codeHash}`, JSON.stringify(record));
   return json({ ok: true }, 200, env);
 }
