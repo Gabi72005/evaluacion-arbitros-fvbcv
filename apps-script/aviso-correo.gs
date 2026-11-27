@@ -6,7 +6,8 @@
  *
  * Puesta en marcha (una sola vez):
  *   1. https://script.google.com → Nuevo proyecto → pega este archivo entero.
- *   2. Cambia DESTINATARIOS por el correo o correos que quieras (separados por comas).
+ *   2. Configuración del proyecto (⚙) → Propiedades del script → añade DESTINATARIOS con el
+ *      correo o correos que quieras, separados por comas.
  *   3. Ejecuta la función generarClave() (menú de arriba → Ejecutar) y acepta los permisos.
  *      En «Registro de ejecución» sale la clave: cópiala.
  *   4. Implementar → Nueva implementación → tipo «Aplicación web»:
@@ -17,11 +18,14 @@
  *        npx wrangler secret put NOTIFY_WEBHOOK_SECRET -c wrangler.toml   (pega la clave)
  *   6. Opcional: ejecuta probarEnvio() para comprobar que te llega un correo.
  *
- * Para cambiar a quién llega: edita DESTINATARIOS y guarda (Ctrl+S). No hace falta
- * volver a implementar ni tocar Cloudflare.
+ * Para cambiar a quién llega: Configuración del proyecto (⚙) → Propiedades del script →
+ * edita DESTINATARIOS y guarda. Se aplica al momento: no hace falta volver a implementar
+ * ni tocar Cloudflare. (Si cambias el CÓDIGO, sí: Implementar → Gestionar implementaciones →
+ * editar → Versión: nueva.)
  */
 
-const DESTINATARIOS = 'gabrielarnedo725@gmail.com';
+// Solo se usa si no existe la propiedad del script DESTINATARIOS
+const DESTINATARIOS_POR_DEFECTO = 'gabrielarnedo725@gmail.com';
 const NOMBRE_REMITENTE = 'Evaluaciones FVBCV';
 
 function doPost(e) {
@@ -39,7 +43,7 @@ function doPost(e) {
 
 function enviar_(asunto, html) {
   MailApp.sendEmail({
-    to: DESTINATARIOS,
+    to: PropertiesService.getScriptProperties().getProperty('DESTINATARIOS') || DESTINATARIOS_POR_DEFECTO,
     subject: asunto,
     htmlBody: html,
     name: NOMBRE_REMITENTE,
@@ -61,7 +65,7 @@ function generarClave() {
   Logger.log('Clave para NOTIFY_WEBHOOK_SECRET: ' + clave);
 }
 
-/** Envía un correo de prueba a DESTINATARIOS. */
+/** Envía un correo de prueba a los destinatarios configurados. */
 function probarEnvio() {
   enviar_('Prueba: aviso de PDFs FVBCV', '<p>Si lees esto, el aviso por correo funciona.</p>');
 }

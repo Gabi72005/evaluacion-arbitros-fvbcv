@@ -46,5 +46,5 @@ Versión publicada en Claude: https://claude.ai/artifact/3MRLptUfkEszo8PoibhbLy 
 **Puesta en marcha**
 
 1. Desplegar el Worker (`cd worker && npx wrangler deploy -c wrangler.toml`; sin `-c` wrangler coge el `wrangler.jsonc` de la raíz y publica la web en vez del Worker); la web se publica desde `main`.
-2. (Opcional, aviso por correo) Seguir los pasos del comentario inicial de `apps-script/aviso-correo.gs`: crear el script en script.google.com, implementarlo como aplicación web y guardar en el Worker `NOTIFY_WEBHOOK_URL` y `NOTIFY_WEBHOOK_SECRET` con `npx wrangler secret put … -c wrangler.toml`. Los destinatarios se cambian en el propio script.
+2. (Opcional, aviso por correo) Seguir los pasos del comentario inicial de `apps-script/aviso-correo.gs`: crear el script en script.google.com, implementarlo como aplicación web y guardar en el Worker `NOTIFY_WEBHOOK_URL` y `NOTIFY_WEBHOOK_SECRET` con `npx wrangler secret put … -c wrangler.toml`. Los destinatarios se cambian en las propiedades del script (DESTINATARIOS), sin volver a implementar.
 3. Actualizar las guías PDF (árbitros y administración) con el nuevo botón y la pestaña PDFs.
