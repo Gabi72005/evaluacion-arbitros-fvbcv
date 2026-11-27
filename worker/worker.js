@@ -1,5 +1,5 @@
 // Env vars needed: EVAL_KV (binding), ADMIN_SECRET, DERIVE_SALT, SESSION_SECRET, ALLOWED_ORIGIN
-// Opcionales (aviso por correo de PDFs subidos): RESEND_API_KEY (secret), NOTIFY_EMAIL, NOTIFY_FROM, ADMIN_URL
+// Opcionales (aviso por correo de PDFs subidos, vía Google Apps Script): NOTIFY_WEBHOOK_URL, NOTIFY_WEBHOOK_SECRET (secrets), ADMIN_URL
 
 // ── Security headers added to every response ────────────────────────────────
 const SEC_HEADERS = {
@@ -756,11 +756,11 @@ async function handleUploadPdf(request, env, ctx) {
   return json({ ok: true, replaced }, 200, env);
 }
 
-// Aviso por correo con Resend (gratis hasta 3.000/mes). Si faltan las variables, no hace nada.
+// Aviso por correo: el Worker llama a un Google Apps Script (apps-script/aviso-correo.gs) que envía
+// el correo desde el Gmail de la admin. Los destinatarios se configuran en el propio script.
+// Si faltan las variables, no hace nada.
 async function sendUploadEmail(env, m, replaced) {
-  // NOTIFY_EMAIL admite uno o varios correos separados por comas
-  const to = String(env.NOTIFY_EMAIL || '').split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)).slice(0, 10);
-  if (!env.RESEND_API_KEY || !to.length) return;
+  if (!env.NOTIFY_WEBHOOK_URL || !env.NOTIFY_WEBHOOK_SECRET) return;
   const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const oneLine = s => String(s ?? '').replace(/[\r\n]+/g, ' ').trim();
   const roleTxt = ROLE_LABELS[m.role] || '—';
@@ -772,16 +772,16 @@ async function sendUploadEmail(env, m, replaced) {
     <p>${replaced ? 'Se ha <b>actualizado</b> un PDF de evaluación' : 'Se ha subido un <b>nuevo PDF</b> de evaluación'}:</p>
     <table style="border-collapse:collapse">${row('Árbitro', m.label)}${row('Aspirante', m.aspirant)}${row('Curso', CURSO_LABELS[m.curso] || '—')}${row('Rol evaluado', roleTxt)}${row('Nº evaluación', m.nEval ? m.nEval + 'ª' : '—')}${row('Fecha', m.fecha || '—')}${row('Resultado', result)}</table>
     ${panel}<p style="color:#64748b;font-size:12px">Lo tienes en la pestaña «PDFs» del panel.</p></div>`;
-  const res = await fetch('https://api.resend.com/emails', {
+  // Apps Script responde con una redirección (302) a googleusercontent.com; fetch la sigue sola.
+  const res = await fetch(env.NOTIFY_WEBHOOK_URL, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: env.NOTIFY_FROM || 'FVBCV Evaluaciones <onboarding@resend.dev>',
-      to, subject, html,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ secret: env.NOTIFY_WEBHOOK_SECRET, subject, html }),
   });
-  // Si Resend rechaza el envío (clave mala, destinatario no permitido…) queda en los logs del Worker
-  if (!res.ok) console.error('Resend error', res.status, (await res.text().catch(() => '')).slice(0, 300));
+  const txt = await res.text().catch(() => '');
+  let out = null; try { out = JSON.parse(txt); } catch {}
+  // Si el script rechaza el envío (clave mala, sin permisos…) queda en los logs del Worker
+  if (!res.ok || !out || !out.ok) console.error('Aviso por correo fallido', res.status, txt.slice(0, 300));
 }
 
 async function handleAdminUploads(env) {

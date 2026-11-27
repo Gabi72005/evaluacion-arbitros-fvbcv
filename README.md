@@ -35,7 +35,7 @@ Versión publicada en Claude: https://claude.ai/artifact/3MRLptUfkEszo8PoibhbLy 
 
 - **Árbitro:** en la pestaña *Final*, una vez descargado el PDF, aparece **«📤 Enviar PDF a la FVBCV»**. El PDF se sube al Worker y queda archivado. Si reenvía la misma evaluación, se sustituye la anterior y se le indica «hay cambios» si la ha modificado tras enviarla.
 - **Admin:** nueva pestaña **PDFs** en el panel, con un banner «🔔 N PDFs nuevos», un contador en la pestaña y otro en el título del navegador. Se comprueba cada 5 min mientras el panel está abierto. Puede buscar, filtrar *Nuevos*, seleccionar los PDFs que quiera (o todos) y **descargarlos en un ZIP**, uno a uno, marcarlos como vistos o eliminarlos. En *Actividad* aparecen como «Enviado».
-- **Aviso por correo:** cada subida manda un email a la admin a través de [Resend](https://resend.com) (gratis, 3.000 correos/mes). Es opcional: sin configurarlo, todo lo demás funciona igual.
+- **Aviso por correo:** cada subida manda un email desde el Gmail de la admin a través de un Google Apps Script (`apps-script/aviso-correo.gs`). Gratis (~100 correos/día) y a cualquier dirección. Es opcional: sin configurarlo, todo lo demás funciona igual.
 
 **Cómo funciona (todo gratis)**
 
@@ -46,12 +46,5 @@ Versión publicada en Claude: https://claude.ai/artifact/3MRLptUfkEszo8PoibhbLy 
 **Puesta en marcha**
 
 1. Desplegar el Worker (`cd worker && npx wrangler deploy -c wrangler.toml`; sin `-c` wrangler coge el `wrangler.jsonc` de la raíz y publica la web en vez del Worker); la web se publica desde `main`.
-2. (Opcional, aviso por correo) Crear una cuenta gratuita en Resend **con el correo de la admin**, generar una API key y ejecutar:
-   ```bash
-   cd worker
-   npx wrangler secret put RESEND_API_KEY
-   npx wrangler secret put NOTIFY_EMAIL      # uno o varios, separados por comas
-   npx wrangler secret put ADMIN_URL         # p. ej. https://evaluacion-arbitros-fvbcv.pages.dev/admin
-   ```
-   Sin dominio propio, Resend envía desde `onboarding@resend.dev` y **solo al correo con el que se creó la cuenta**, que es justo el de la admin. Con un dominio verificado en Resend se puede enviar a cualquier correo y fijar `NOTIFY_FROM`. Si el aviso falla, el motivo aparece en los logs del Worker (`npx wrangler tail`).
+2. (Opcional, aviso por correo) Seguir los pasos del comentario inicial de `apps-script/aviso-correo.gs`: crear el script en script.google.com, implementarlo como aplicación web y guardar en el Worker `NOTIFY_WEBHOOK_URL` y `NOTIFY_WEBHOOK_SECRET` con `npx wrangler secret put … -c wrangler.toml`. Los destinatarios se cambian en el propio script.
 3. Actualizar las guías PDF (árbitros y administración) con el nuevo botón y la pestaña PDFs.
