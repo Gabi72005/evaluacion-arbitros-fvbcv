@@ -29,9 +29,7 @@ Los datos se guardan solo en el navegador/dispositivo donde se usa.
 
 Versión publicada en Claude: https://claude.ai/artifact/3MRLptUfkEszo8PoibhbLy (última actualización: 9 nov 2026).
 
-## Envío de PDFs a la federación (rama preparada, sin activar)
-
-> Esta funcionalidad vive solo en la rama `claude/busy-ramanujan-iv7aw8`. No está en `main` ni desplegada.
+## Envío de PDFs a la federación
 
 **Qué hace**
 
@@ -45,9 +43,9 @@ Versión publicada en Claude: https://claude.ai/artifact/3MRLptUfkEszo8PoibhbLy 
 - El ZIP se genera en el navegador de la admin con **JSZip 3.10.1**, alojado en `vendor/jszip.min.js` (no depende de ninguna CDN).
 - Endpoints nuevos del Worker: `POST /upload/pdf` (sesión del árbitro) y `GET /admin/uploads`, `GET /admin/uploads/file?id=`, `POST /admin/uploads/seen`, `POST /admin/uploads/delete` (token de admin).
 
-**Para activarlo cuando se quiera**
+**Puesta en marcha**
 
-1. Fusionar esta rama en `main` y desplegar el Worker (`cd worker && npx wrangler deploy`) y la web.
+1. Desplegar el Worker (`cd worker && npx wrangler deploy`); la web se publica desde `main`.
 2. (Opcional, aviso por correo) Crear una cuenta gratuita en Resend **con el correo de la admin**, generar una API key y ejecutar:
    ```bash
    cd worker
