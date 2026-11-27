@@ -45,7 +45,7 @@ Versión publicada en Claude: https://claude.ai/artifact/3MRLptUfkEszo8PoibhbLy 
 
 **Puesta en marcha**
 
-1. Desplegar el Worker (`cd worker && npx wrangler deploy`); la web se publica desde `main`.
+1. Desplegar el Worker (`cd worker && npx wrangler deploy -c wrangler.toml`; sin `-c` wrangler coge el `wrangler.jsonc` de la raíz y publica la web en vez del Worker); la web se publica desde `main`.
 2. (Opcional, aviso por correo) Crear una cuenta gratuita en Resend **con el correo de la admin**, generar una API key y ejecutar:
    ```bash
    cd worker

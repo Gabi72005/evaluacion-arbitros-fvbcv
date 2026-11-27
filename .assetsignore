@@ -11,3 +11,10 @@ node_modules
 .git
 .DS_Store
 .npmrc
+# no publicar como web el código del servidor ni archivos internos
+worker
+README.md
+netlify.toml
+wrangler.jsonc
+.gitignore
+.assetsignore
