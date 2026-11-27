@@ -5,3 +5,6 @@ compatibility_date = "2024-01-01"
 [[kv_namespaces]]
 binding = "EVAL_KV"
 id = "7de36c00b42c47259b718d05e0422748"
+
+[vars]
+ADMIN_URL = "https://evaluacion-arbitros-fvbcv.pages.dev/admin.html"
