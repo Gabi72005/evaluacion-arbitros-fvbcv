@@ -111,6 +111,9 @@ async function verifyAdminToken(authHeader, env) {
 
 const RL_MAX = 5;
 const RL_WINDOW = 900; // seconds (15 min)
+// Límite de intentos del código de los árbitros (5 cada 15 min por IP y dispositivo).
+// Desactivado de momento; poner a true para volver a activarlo.
+const LOGIN_RATE_LIMIT = false;
 
 async function checkRateLimit(env, key, max = RL_MAX) {
   const rlKey = `rl:${key}`;
@@ -285,16 +288,18 @@ async function handleValidate(request, env) {
   const normalized = String(code).trim().toUpperCase().replace(/[^0-9A-F]/g, '');
   if (normalized.length !== 8) return json({ ok: false, error: 'Código incorrecto' }, 200, env);
 
-  // Rate limit by IP and deviceId
-  const rlIp = await checkRateLimit(env, `val:ip:${ip}`);
-  if (rlIp.blocked) {
-    return json({ ok: false, error: 'Demasiados intentos. Espera antes de volver a intentar.' }, 429, env,
-      { 'Retry-After': String(rlIp.retryAfter) });
-  }
-  const rlDev = await checkRateLimit(env, `val:did:${deviceId}`);
-  if (rlDev.blocked) {
-    return json({ ok: false, error: 'Demasiados intentos. Espera antes de volver a intentar.' }, 429, env,
-      { 'Retry-After': String(rlDev.retryAfter) });
+  // Rate limit by IP and deviceId (desactivado de momento: LOGIN_RATE_LIMIT = false)
+  if (LOGIN_RATE_LIMIT) {
+    const rlIp = await checkRateLimit(env, `val:ip:${ip}`);
+    if (rlIp.blocked) {
+      return json({ ok: false, error: 'Demasiados intentos. Espera antes de volver a intentar.' }, 429, env,
+        { 'Retry-After': String(rlIp.retryAfter) });
+    }
+    const rlDev = await checkRateLimit(env, `val:did:${deviceId}`);
+    if (rlDev.blocked) {
+      return json({ ok: false, error: 'Demasiados intentos. Espera antes de volver a intentar.' }, 429, env,
+        { 'Retry-After': String(rlDev.retryAfter) });
+    }
   }
 
   // Master code: stored as MASTER_CODE secret, never binds to a device
